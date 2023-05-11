@@ -1,0 +1,16 @@
+target = [0, 1.8]
+target_rad = 0.04
+wind_dir = [0, -1]
+wind_vel = 5
+[x1, x2] = [0, 0]
+I = [1, 2]
+heading = []
+#u = real(acos(dot(heading, wind_dir)/(norm(heading)*norm(wind_dir))))
+u = pi/4
+u_opt = pi/4
+#r =  0.05*((u_opt)^2-(u-u_opt))
+r = 0.05
+delta_t = 0.1
+delta_x = 0.02
+x1 = r*sin(-theta+(-1)^Q*u)
+x2 = r*cos(theta+(-1)^Q*u)
