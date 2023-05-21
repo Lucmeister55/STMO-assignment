@@ -39,7 +39,7 @@ begin
 	Before going into details about how the models work, some basic sailing theory is introduced. It is not possible for boats to sail directly into the wind, requiring the course of the boat to alternate between headings. This process is called "tacking" and is used commonly by sailors to make their way to a mark that is upwind. On a tack, the sailor will generally point the sailboat as close to the wind as possible while still keeping the winds blowing through the sails in a manner that provides aerodynamic lift to propel the boat.
 	
 	Then the boat is turned away from the wind in slight increments in order to generate more forward lift on the sails, allowing it to move with greater speed, but less directly toward the destination. The range of heading that does not produce any significant lift is called the no-go zone.
-	$(Resource("https://github.com/Lucmeister55/STMO-assignment/blob/main/images/sailing_intro.png?raw=true",:width => 1000, :align => "middle"))
+	$(Resource("https://github.com/Lucmeister55/STMO-assignment/blob/main/images/sailing_intro.png?raw=true", :width => 1000, :align => "middle"))
 	"""
 end
 
