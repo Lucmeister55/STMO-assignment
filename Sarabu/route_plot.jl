@@ -55,7 +55,7 @@ scatter(x, y)
 xw = [x_tar[2, 1], x_tar[2, 1]+wind_dir[1]]
 yw = [x_tar[2, 2], x_tar[2, 2]+wind_dir[2]]
 plot!(xw,yw, arrow=true, arrowsize=0.5)
-savefig("trajectory.png")
+savefig("Sarabu/trajectory.png")
 
 # Record elapsed time
 solvertime = (now() - t0)
