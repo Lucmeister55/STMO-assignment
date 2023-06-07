@@ -126,9 +126,75 @@ md"""## Implementation
 """
 
 # ╔═╡ 159b8d41-a5ce-494a-9566-df34547b1a8d
-md""" ### Tackpoint estimation
+md""" ### Tackpoint Estimation
+"""
+
+# ╔═╡ e9c2610f-f94d-4426-be0f-d11d8e1498ab
+md""" #### Line Search (Brute Force)
 The starting point and the current destination is specified in this routine. The programme then calculates an initial feasible point for the tack location. The model employs a pattern search algorithm incorporating an accelerating/decelerating step size. The pattern search algorithm requires to start in the feasible region because starting in the no-go zone results in an infinite path time value.
 """
+
+# ╔═╡ d628a011-a1fb-4947-8da1-2a1c7e2cf048
+md""" #### Gradient Descent
+"""
+
+# ╔═╡ 4622c7a9-a35c-44ef-9c4a-e6d09faa6e08
+function tackpoint_GD(x0, x_tar_c, maxiter, vel_wind, wind_dir, step_inc)
+	#calculating initial xt---------------------------------------------------------
+    vect_tar = (x_tar_c - x0) #generate vector to active target
+    mid = 0.5 .* vect_tar + x0 #place point in the middle
+    deviation = ((x_tar_c[2]-x0[2])^2/(x_tar_c[1]-x0[1]))/(atan(deg2rad(15))) #define deviation of point from vect_tar
+    xt0 = [-deviation, 0] + mid #initial tack point
+	
+	xt = xt0
+
+    iter = 0
+
+	alpha = 1
+	rho = 0.7
+	c = 0.1
+
+    while iter < maxiter # set maximum number of iterations
+        # Define loss function
+        loss(xt) = pathtime(x_tar_c, x0, xt, vel_wind, wind_dir, step_inc)
+
+        # Compute gradients using Flux's gradient function
+        grad_xt = Flux.gradient(x -> loss(x), xt)[1]
+
+        # Update xt using gradient descent
+		while pathtime(x_tar_c, x0, xt - alpha * xt, vel_wind, wind_dir, step_inc) > pathtime(x_tar_c, x0, xt, vel_wind, wind_dir, step_inc) + alpha * c * 
+			alpha = alpha * rho
+		end
+			
+        xt -= alpha * grad_xt
+
+        iter += 1
+		
+        println(iter)
+        println(xt)
+    end
+    return xt
+end
+
+# ╔═╡ 81c03358-1a48-4c33-802a-f2bfbf89f6d7
+md""" ### Step Size
+"""
+
+# ╔═╡ 0cbef7ea-c480-4679-88a2-f9e929f3c676
+md""" #### Backtracking Line Search
+"""
+
+# ╔═╡ b1b865d3-e4cd-4850-adba-9462b5930929
+function backtracking_line_search(f, x0, Dx, grad_f, c=0.1,rho=0.7)
+    
+	alpha=1
+	
+    while (f(x0 + alpha*Dx) > f(x0) +  alpha*c*sum(grad_f(x0) *Dx))
+        alpha *=rho
+	end
+	
+    return alpha
+end
 
 # ╔═╡ 913610b3-1ecd-49e1-a692-41c86ef0431e
 md""" ### Objective function
@@ -233,7 +299,7 @@ function pathtime(x_tar_c, x0, xt, vel_wind, wind_dir, step_inc)
 end
 
 # ╔═╡ 546844bf-3e36-4e9f-9bc9-aeb92649b108
-function tackpoint(x0, x_tar_c, maxiter, vel_wind, wind_dir, step_inc)
+function tackpoint_LS(x0, x_tar_c, maxiter, vel_wind, wind_dir, step_inc)
 	#calculating initial xt---------------------------------------------------------
     vect_tar = (x_tar_c - x0) #generate vector to active target
     mid = 0.5 .* vect_tar + x0 #place point in the middle
@@ -310,7 +376,7 @@ function tackpoint(x0, x_tar_c, maxiter, vel_wind, wind_dir, step_inc)
 end
 
 # ╔═╡ 6ff92112-41d4-47bb-9eb0-4a2499f386fd
-md""" ### Calulate path
+md""" ### Calculate Path
 Function to calculate the path produced by this algorithm.
 """
 
@@ -390,12 +456,19 @@ begin
 	#Routine to determine the best tack point between two marks and calculate time
 	x_tar_c = [x_tar_x, x_tar_y] #active destination
 	x0 = [x0_x, x0_y] #starting point
-
-	xt = tackpoint(x0, x_tar_c, maxiter, vel_wind, wind_dir, step_inc)
 end
 
-# ╔═╡ bb79a6d8-cc08-4b0f-8a65-f85a2aec3a17
-begin
+# ╔═╡ 4d896f17-c83f-42cc-8931-77ef6a0b2802
+md""" ### Results
+"""
+
+# ╔═╡ 5c858f72-fcda-45b5-b9a3-036e5cc2d9e9
+md""" #### Line Search
+"""
+
+# ╔═╡ 1885527b-2fb8-46e1-99a5-a21e0efd0358
+let
+	xt = tackpoint_LS(x0, x_tar_c, maxiter, vel_wind, wind_dir, step_inc)
 	# calculate single tack path
 	t0 = now() # record start time of function
 	target_tol = 4 # radius in metres within target to qualify
@@ -406,14 +479,7 @@ begin
 	# Record elapsed time
 	solvertime = (now() - t0)
 	println(solvertime)
-end
 
-# ╔═╡ 4d896f17-c83f-42cc-8931-77ef6a0b2802
-md""" ### Plot path
-"""
-
-# ╔═╡ 287156be-ae2f-4195-bedb-6509bf96df36
-let
 	scatter(x, y)
 	# Plot the wind vector
 	xw = [x_tar[2, 1], x_tar[2, 1]+wind_dir[1]*10]
@@ -421,47 +487,9 @@ let
 	plot!(xw, yw, arrow=true, arrowsize=0.5)
 end
 
-# ╔═╡ 4a96f0ad-e431-4f02-8da2-c24432ba66ff
-md"""## Gradient Descent
+# ╔═╡ cb3e7da3-4146-477e-8f24-6a55a1e800c7
+md""" #### Gradient Descent
 """
-
-# ╔═╡ 20e5f95a-cc00-461f-af80-32e148f32ea3
-function tackpoint_GD(x0, x_tar_c, maxiter, vel_wind, wind_dir, step_inc)
-	#calculating initial xt---------------------------------------------------------
-    vect_tar = (x_tar_c - x0) #generate vector to active target
-    mid = 0.5 .* vect_tar + x0 #place point in the middle
-    deviation = ((x_tar_c[2]-x0[2])^2/(x_tar_c[1]-x0[1]))/(atan(deg2rad(15))) #define deviation of point from vect_tar
-    xt0 = [-deviation, 0] + mid #initial tack point
-	
-	xt = xt0
-
-    iter = 0
-
-	alpha = 1
-	rho = 0.7
-	c = 0.1
-
-    while iter < maxiter # set maximum number of iterations
-        # Define loss function
-        loss(xt) = pathtime(x_tar_c, x0, xt, vel_wind, wind_dir, step_inc)
-
-        # Compute gradients using Flux's gradient function
-        grad_xt = Flux.gradient(x -> loss(x), xt)[1]
-
-        # Update xt using gradient descent
-		while pathtime(x_tar_c, x0, xt - alpha * xt, vel_wind, wind_dir, step_inc) > pathtime(x_tar_c, x0, xt, vel_wind, wind_dir, step_inc) + alpha * c * 
-			alpha = alpha * rho
-		end
-			
-        xt -= alpha * grad_xt
-
-        iter += 1
-		
-        println(iter)
-        println(xt)
-    end
-    return xt
-end
 
 # ╔═╡ 664f2131-553d-4a89-ac5f-cf8138c59b4d
 let
@@ -2017,7 +2045,13 @@ version = "1.4.1+0"
 # ╟─3fdab425-52ef-4be5-a8a2-425cd2a786ef
 # ╟─d0019978-aa34-4f54-b4b7-4d607274b5a6
 # ╟─159b8d41-a5ce-494a-9566-df34547b1a8d
+# ╟─e9c2610f-f94d-4426-be0f-d11d8e1498ab
 # ╠═546844bf-3e36-4e9f-9bc9-aeb92649b108
+# ╟─d628a011-a1fb-4947-8da1-2a1c7e2cf048
+# ╠═4622c7a9-a35c-44ef-9c4a-e6d09faa6e08
+# ╟─81c03358-1a48-4c33-802a-f2bfbf89f6d7
+# ╟─0cbef7ea-c480-4679-88a2-f9e929f3c676
+# ╠═b1b865d3-e4cd-4850-adba-9462b5930929
 # ╟─913610b3-1ecd-49e1-a692-41c86ef0431e
 # ╠═f65b308e-8764-4c2b-851b-aa16d1277041
 # ╠═4cca6d78-7c80-46de-b055-c59d457e93a3
@@ -2025,11 +2059,10 @@ version = "1.4.1+0"
 # ╠═c315d2b8-1a38-4ae1-b6d1-151b1a99cd20
 # ╟─fe1536be-8589-48ea-bbb8-9df739c4766c
 # ╠═868a916b-1aa3-4f6d-acf8-84f9b955b3e5
-# ╠═bb79a6d8-cc08-4b0f-8a65-f85a2aec3a17
 # ╟─4d896f17-c83f-42cc-8931-77ef6a0b2802
-# ╠═287156be-ae2f-4195-bedb-6509bf96df36
-# ╟─4a96f0ad-e431-4f02-8da2-c24432ba66ff
-# ╠═20e5f95a-cc00-461f-af80-32e148f32ea3
+# ╟─5c858f72-fcda-45b5-b9a3-036e5cc2d9e9
+# ╠═1885527b-2fb8-46e1-99a5-a21e0efd0358
+# ╟─cb3e7da3-4146-477e-8f24-6a55a1e800c7
 # ╠═664f2131-553d-4a89-ac5f-cf8138c59b4d
 # ╟─00000000-0000-0000-0000-000000000001
 # ╟─00000000-0000-0000-0000-000000000002
