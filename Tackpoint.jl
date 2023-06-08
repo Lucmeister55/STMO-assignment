@@ -44,21 +44,29 @@ begin
 	"""
 end
 
-# ╔═╡ bbbf78d6-7bf0-4eb0-883b-9bc8f98a18d3
-md""" ## VMG
-The VMG can be calculated by using the following expression where Vtrue is the velocity of the sailboat with respect to stationary ground and 𝜃 is the angle between current heading and the direction to destination. 
+# ╔═╡ 7c54bb74-2116-4540-9dbd-f10d49e3a3bd
+md""" ## Methods
+"""
 
-``VMG=Vtrue∗ cos\theta``
+# ╔═╡ bbbf78d6-7bf0-4eb0-883b-9bc8f98a18d3
+md""" ### VMG
+The VMG can be calculated by using the following expression where $V_{true}$ is the velocity of the sailboat with respect to stationary ground and $\theta_s$ is the angle between current heading and the direction to destination. 
+
+``VMG=V_{true}∗\cos(\theta_s)``
 
 However, the relationship between the true velocity of the sailboat and the true wind velocity depends on what assumptions are made. Some instances take into consideration the fact that a sailboat’s Speed Over Ground increases or decreases relative to the wind direction. In theory, a sailboat’s speed increases while sailing from upwind to a downwind direction. Other parameters to factor in include the sail boat’s specifics that depend on the make and design of the boat. These are the 'Velocity Increase Constant', ‘No – Go Zone’ and ‘Degree Interval’, which are normally provided by the manufacturer. The physical meaning of this constant expresses 'the sail boat increases speed by 10% for every X degrees from the wind'. Considering these factors, a True VMG can be calculated using the equations:
 
-For Upwind: $VMG=\frac{V_w}{cos\theta_s}*(1+\beta)^{\frac{|\theta_0-\theta_s|}{i}}*\theta_\gamma$
+For Upwind: 
 
-For Downwind: $VMG=\frac{V_w}{cos\theta_s}*(1+\beta)^{\frac{|180°-\theta_0-\theta_s|}{i}}*\theta_\gamma$
+$$VMG=\frac{V_w}{\cos(\theta_0)}*(1+\beta)^{\frac{|\theta_0-\theta_\gamma|}{i}}*\cos(\theta_s)$$
+
+For Downwind: 
+
+$$VMG=\frac{V_w}{\cos(\theta_0)}*(1+\beta)^{\frac{|180°-\theta_0-\theta_\gamma|}{i}}*\cos(\theta_s)$$
 
 VMG = Velocity Made Good towards destination\
 $V_w$ = Velocity of wind\
-$\theta_s$ = Angle between heading and direction\
+$\theta_s$ = Angle between heading and destination\
 $\theta_0$ = No-go zone\
 $\theta_\gamma$ = Angle between wind direction and heading\
 $\beta$ = Velocity increase constant\
@@ -68,7 +76,7 @@ In the expressions shown above the no-go zone ($\theta_0$), Degree Interval (i) 
 """
 
 # ╔═╡ cea4baae-51e5-43a6-a64f-a11e3d474fb6
-md""" ## Assumptions
+md""" ### Assumptions
 In order to simplify the optimization problem, the following assumptions are made and incorporated into the models:
 - True velocity of boat at any point of time is a function of the velocity of wind and heading relative to wind direction only. This implies that at any point these are the only two variables required to calculate how fast the boat will be moving with respect to ground (true velocity) in the direction it is moving.
 - Effects of momentum are not considered. As the expressions shown earlier allow for the calculation of velocity instantaneously, the time-dynamic effects are not modelled. This means that acceleration and deceleration are not taken into account and if the boat moves from a current position to the next position, the momentum is not carried or lost but the position’s assigned momentum is taken up.
@@ -77,7 +85,7 @@ In order to simplify the optimization problem, the following assumptions are mad
 """
 
 # ╔═╡ 1f442a09-9b34-4644-949d-b649187470c2
-md"""## Decision Variables
+md"""### Decision Variables
 The objective of the algorithms is to produce paths that take the least amount of time to complete a given course. In order to describe the path taken by the sailboats, the variables required are the x and y coordinates of the sailboat at a given time. Instead of determining the coordinates for each time step, 
 they are determined in consecutive steps-this means the coordinates $X^{k+1}$ are determined relative to $X^k$ in distance and direction as opposed to determining $X^{k+1}$ as a function of time step $t^{k+1}$.
 
@@ -87,7 +95,7 @@ In other standard optimization problems tackled during the course, the design sp
 """
 
 # ╔═╡ 75802d02-ee43-4028-ab28-483f9af7a54c
-md"""## Objective
+md"""### Objective
 The objective of the algorithm is to find the path of least resistance, or the path that takes the least amount of time to complete a given course. The time taken is calculated in a discretized manner: The velocity of the sailboat is found for each step and is used to divide the step size.
 
 $\textrm{time step k} = \frac{\textrm{step size}}{\textrm{velocity in direction of step}}$
@@ -101,7 +109,7 @@ both the models are inherently different.
 """
 
 # ╔═╡ c279c555-7d66-481e-b332-8519fba0f950
-md"""## Constraints
+md"""### Constraints
 This path optimization problem only has one constraint – at no instance should the boat bear a heading into the no-go zone. In real life however, during a tack, the boat indeed faces the no-go zone briefly before regaining lift in the sails. It is its momentum that allows the boat to steer away from the no-go zone and into a heading that permits forward motion. In the models presented in the report, it is 
 important to remember that the boat’s momentum terms are not incorporated. This means that if at any point the algorithm produces a path that involves a heading into the no-go zone, it loses its velocity and cannot make further steps. The algorithms get past this flaw by limiting the heading from entering the no-go zone at all times.
 
@@ -114,7 +122,7 @@ $\theta_w$ = heading relative to wind direction\
 """
 
 # ╔═╡ 3fdab425-52ef-4be5-a8a2-425cd2a786ef
-md"""## Model
+md"""### Model
 The Single Tack Method (STM) is developed so that the path produced by the model is extremely easy to navigate. This is achieved by implicitly allowing the algorithm to produce a path between two points that incorporates a maximum of one tack (i.e. two leg journey). The algorithm is then required to produce the tack length and angle that results in the minimum time elapsed value. It is important to note that the manner in which ease of navigation is incorporated into this model is by limiting the number of tacks. By increasing the number of tacks, the solution process can get very complex. 
 
 To explain this, a scenario is discussed – If arbitrary location A is considered the starting point and a destination is set at B, to produce a path that can only have a single tack, the problem is reduced to finding a point Ts (tack point) such that when the boat travels from A to Ts, Ts to B, it takes less amount 
@@ -125,89 +133,17 @@ of time than if the boat sailed from A to T, T to B. Here T is an arbitrary tack
 md"""## Implementation
 """
 
-# ╔═╡ 159b8d41-a5ce-494a-9566-df34547b1a8d
-md""" ### Tackpoint Estimation
-"""
-
-# ╔═╡ e9c2610f-f94d-4426-be0f-d11d8e1498ab
-md""" #### Line Search (Brute Force)
-The starting point and the current destination is specified in this routine. The programme then calculates an initial feasible point for the tack location. The model employs a pattern search algorithm incorporating an accelerating/decelerating step size. The pattern search algorithm requires to start in the feasible region because starting in the no-go zone results in an infinite path time value.
-"""
-
-# ╔═╡ d628a011-a1fb-4947-8da1-2a1c7e2cf048
-md""" #### Gradient Descent
-"""
-
-# ╔═╡ 4622c7a9-a35c-44ef-9c4a-e6d09faa6e08
-function tackpoint_GD(x0, x_tar_c, maxiter, vel_wind, wind_dir, step_inc)
-	#calculating initial xt---------------------------------------------------------
-    vect_tar = (x_tar_c - x0) #generate vector to active target
-    mid = 0.5 .* vect_tar + x0 #place point in the middle
-    deviation = ((x_tar_c[2]-x0[2])^2/(x_tar_c[1]-x0[1]))/(atan(deg2rad(15))) #define deviation of point from vect_tar
-    xt0 = [-deviation, 0] + mid #initial tack point
-	
-	xt = xt0
-
-    iter = 0
-
-	alpha = 1
-	rho = 0.7
-	c = 0.1
-
-    while iter < maxiter # set maximum number of iterations
-        # Define loss function
-        loss(xt) = pathtime(x_tar_c, x0, xt, vel_wind, wind_dir, step_inc)
-
-        # Compute gradients using Flux's gradient function
-        grad_xt = Flux.gradient(x -> loss(x), xt)[1]
-
-        # Update xt using gradient descent
-		while pathtime(x_tar_c, x0, xt - alpha * xt, vel_wind, wind_dir, step_inc) > pathtime(x_tar_c, x0, xt, vel_wind, wind_dir, step_inc) + alpha * c * 
-			alpha = alpha * rho
-		end
-			
-        xt -= alpha * grad_xt
-
-        iter += 1
-		
-        println(iter)
-        println(xt)
-    end
-    return xt
-end
-
-# ╔═╡ 81c03358-1a48-4c33-802a-f2bfbf89f6d7
-md""" ### Step Size
-"""
-
-# ╔═╡ 0cbef7ea-c480-4679-88a2-f9e929f3c676
-md""" #### Backtracking Line Search
-"""
-
-# ╔═╡ b1b865d3-e4cd-4850-adba-9462b5930929
-function backtracking_line_search(f, x0, Dx, grad_f, c=0.1,rho=0.7)
-    
-	alpha=1
-	
-    while (f(x0 + alpha*Dx) > f(x0) +  alpha*c*sum(grad_f(x0) *Dx))
-        alpha *=rho
-	end
-	
-    return alpha
-end
-
 # ╔═╡ 913610b3-1ecd-49e1-a692-41c86ef0431e
 md""" ### Objective function
-Once, the pattern search algorithm is initialised, the path time is calculated in each of the probe directions (x+,y+,x-,y-) using the function handle pathtime. This function handle accepts the starting point of the sailboat, the tack point and the destination point and integrates along the two legs of the journey to find the time elapsed (or the path time). This is the objective function value that needs to be minimised. 
-
-With the objective function values from all four probes, the pattern search algorithm chooses the directions in x and y that favour the minimizing of the path time and determines the new tack point. Depending on the search directions (in X and Y) recorded, the pattern search algorithm updates the acceleration terms to reduce the number of pattern moves required to achieve convergence. Once convergence is reached, the optimal tack point (xt) and the optimal time elapsed values are returned.
 """
 
 # ╔═╡ f65b308e-8764-4c2b-851b-aa16d1277041
 my_acos(x) = x ≈ 1 ? zero(x) : x ≈ -1 ? one(x)*π : acos(x)
 
 # ╔═╡ 4cca6d78-7c80-46de-b055-c59d457e93a3
-function pathtime(x_tar_c, x0, xt, vel_wind, wind_dir, step_inc)
+function pathtime(xt, params)
+	x0, x_tar_c, vel_wind, wind_dir, maxiter = params
+	
     # x_tar_c = active target
     # x0 = current position
     # xt = tack coordinates
@@ -215,6 +151,7 @@ function pathtime(x_tar_c, x0, xt, vel_wind, wind_dir, step_inc)
     theta_nogo = deg2rad(40) # deadzone
     velcons = 3 # velocity increase constant
     deg_int = 5 # constant provided by manufacture
+	step_inc = 0.1
     
     # tack vector 1
     tack_vect_1 = xt - x0 
@@ -237,7 +174,7 @@ function pathtime(x_tar_c, x0, xt, vel_wind, wind_dir, step_inc)
         theta_rd = real(my_acos(dot(heading, target_vect)/(norm(heading)*norm(target_vect))))
         
         # calculate angle between heading and wind direction
-        theta_rw = real(my_acos(dot(heading, wind_dir)/(norm(heading)*norm(wind_dir))))
+        theta_rw = real(my_acos(dot(heading,wind_dir)/(norm(heading)*norm(wind_dir))))
         
         if dot(wind_dir, heading)/(norm(wind_dir)*norm(heading)) < 0
             # calculate velocity made good
@@ -298,8 +235,46 @@ function pathtime(x_tar_c, x0, xt, vel_wind, wind_dir, step_inc)
     return t
 end
 
+# ╔═╡ 81c03358-1a48-4c33-802a-f2bfbf89f6d7
+md""" ### Step Size
+"""
+
+# ╔═╡ 0cbef7ea-c480-4679-88a2-f9e929f3c676
+md""" #### Backtracking Line Search
+"""
+
+# ╔═╡ b1b865d3-e4cd-4850-adba-9462b5930929
+function backtracking_line_search(f, x0, Dx, params, c=0.1, rho=0.7)
+    
+	alpha=1
+
+	print(f(x0 + alpha*Dx, params))
+	
+    while (f(x0 + alpha*Dx, params) > f(x0, params) + alpha * c * transpose(-Dx)*Dx)
+        alpha *= rho
+		print(alpha)
+	end
+	
+    return alpha
+end
+
+# ╔═╡ 159b8d41-a5ce-494a-9566-df34547b1a8d
+md""" ### Tackpoint Estimation
+"""
+
+# ╔═╡ e9c2610f-f94d-4426-be0f-d11d8e1498ab
+md""" #### Line Search (Brute Force)
+The starting point and the current destination is specified in this routine. The programme then calculates an initial feasible point for the tack location. The model employs a pattern search algorithm incorporating an accelerating/decelerating step size. The pattern search algorithm requires to start in the feasible region because starting in the no-go zone results in an infinite path time value.
+
+Once, the pattern search algorithm is initialised, the path time is calculated in each of the probe directions (x+,y+,x-,y-) using the function handle pathtime. This function handle accepts the starting point of the sailboat, the tack point and the destination point and integrates along the two legs of the journey to find the time elapsed (or the path time). This is the objective function value that needs to be minimised. 
+
+With the objective function values from all four probes, the pattern search algorithm chooses the directions in x and y that favour the minimizing of the path time and determines the new tack point. Depending on the search directions (in X and Y) recorded, the pattern search algorithm updates the acceleration terms to reduce the number of pattern moves required to achieve convergence. Once convergence is reached, the optimal tack point (xt) and the optimal time elapsed values are returned.
+"""
+
 # ╔═╡ 546844bf-3e36-4e9f-9bc9-aeb92649b108
-function tackpoint_LS(x0, x_tar_c, maxiter, vel_wind, wind_dir, step_inc)
+function tackpoint_LS(params)
+	x0, x_tar_c, vel_wind, wind_dir, maxiter = params
+	
 	#calculating initial xt---------------------------------------------------------
     vect_tar = (x_tar_c - x0) #generate vector to active target
     mid = 0.5 .* vect_tar + x0 #place point in the middle
@@ -320,11 +295,11 @@ function tackpoint_LS(x0, x_tar_c, maxiter, vel_wind, wind_dir, step_inc)
 
     while iter < maxiter # set maximum number of iterations
         # calculate path times at probes
-        pathtime_xtc = pathtime(x_tar_c, x0, xt, vel_wind, wind_dir, step_inc) # path time if current tack point is used
-        pathtime_xtc_xplus = pathtime(x_tar_c, x0, xt + plength_x, vel_wind, wind_dir, step_inc)
-        pathtime_xtc_xminus = pathtime(x_tar_c, x0, xt - plength_x, vel_wind, wind_dir, step_inc)
-        pathtime_xtc_yplus = pathtime(x_tar_c, x0, xt + plength_y, vel_wind, wind_dir, step_inc)
-        pathtime_xtc_yminus = pathtime(x_tar_c, x0, xt - plength_y, vel_wind, wind_dir, step_inc)
+        pathtime_xtc = pathtime(xt, params) # path time if current tack point is used
+        pathtime_xtc_xplus = pathtime(xt + plength_x, params)
+        pathtime_xtc_xminus = pathtime(xt - plength_x, params)
+        pathtime_xtc_yplus = pathtime(xt + plength_y, params)
+        pathtime_xtc_yminus = pathtime(xt - plength_y, params)
 
         # probing in x and updating xt
         # find minimum path time
@@ -358,8 +333,8 @@ function tackpoint_LS(x0, x_tar_c, maxiter, vel_wind, wind_dir, step_inc)
         xt = xt + [ax*sx, ay*sy] # update tack position
         adpxt = adpx # store acceleration terms
         adpyt = adpy
-        minpathtime = pathtime(x_tar_c, x0, xt, vel_wind, wind_dir, step_inc) # calculate corresponding minpathtime
-        minpathtime_p = pathtime(x_tar_c, x0, xt_p, vel_wind, wind_dir, step_inc)
+        minpathtime = pathtime(xt, params) # calculate corresponding minpathtime
+        minpathtime_p = pathtime(xt_p, params)
 
         # prevent entering into infeasible region
         if minpathtime_p < minpathtime
@@ -371,6 +346,50 @@ function tackpoint_LS(x0, x_tar_c, maxiter, vel_wind, wind_dir, step_inc)
         println(iter)
         println(xt)
         println(minpathtime)
+    end
+    return xt
+end
+
+# ╔═╡ d628a011-a1fb-4947-8da1-2a1c7e2cf048
+md""" #### Gradient Descent
+"""
+
+# ╔═╡ 4622c7a9-a35c-44ef-9c4a-e6d09faa6e08
+function tackpoint_GD(params)
+	
+	x0, x_tar_c, vel_wind, wind_dir, maxiter = params
+	
+	#calculating initial xt---------------------------------------------------------
+    vect_tar = (x_tar_c - x0) #generate vector to active target
+    mid = 0.5 .* vect_tar + x0 #place point in the middle
+    deviation = ((x_tar_c[2]-x0[2])^2/(x_tar_c[1]-x0[1]))/(atan(deg2rad(15))) #define deviation of point from vect_tar
+    xt0 = [-deviation, 0] + mid #initial tack point
+	
+	xt = xt0
+
+    iter = 0
+
+    while iter < maxiter # set maximum number of iterations
+        # Define loss function
+        #loss(xt) = pathtime(xt, params)
+
+        # Compute gradients using Flux's gradient function
+        #Dx = -Flux.gradient(x -> loss(x), xt)[1]
+
+		gs = gradient(Flux.params(xt)) do
+        	pathtime(xt, params)
+       	end
+
+		Dx = -gs[xt]
+
+		t = backtracking_line_search(pathtime, xt, Dx, params)
+			
+        xt += t * Dx
+
+        iter += 1
+		
+        println(iter)
+        println(xt)
     end
     return xt
 end
@@ -417,6 +436,10 @@ function track(x0, x_tar, target_tol)
     return x, y
 end
 
+# ╔═╡ 3fc06973-839c-47d4-b0ca-2cdef798d5ca
+md""" ## Results
+"""
+
 # ╔═╡ fe1536be-8589-48ea-bbb8-9df739c4766c
 md""" ### Parameter Options:
 **Starting point**\
@@ -426,11 +449,10 @@ md""" ### Parameter Options:
 `X` : $(@bind x_tar_x Slider(0:50, default=0, show_value=true))\
 `Y` : $(@bind x_tar_y Slider(0:50, default=50, show_value=true))\
 **Wind**\
-`Wind velocity` : $(@bind vel_wind Slider(1:10, default=10, show_value=true))\
+`Wind velocity` : $(@bind vel_wind Slider(1:10, default=5, show_value=true))\
 `Wind direction (origin)` : $(@bind wind_dir_temp Select(["N", "NE", "E", "SE", "S", "SW", "W", "NW"], default="N"))\
 **Algorithm**\
 `Maximum iterations` : $(@bind maxiter Slider(1:1000, default=100, show_value=true))\
-`Step size` : $(@bind step_inc Slider(0:0.05:1, default=0.1, show_value=true))\
 """
 
 # ╔═╡ 868a916b-1aa3-4f6d-acf8-84f9b955b3e5
@@ -468,7 +490,8 @@ md""" #### Line Search
 
 # ╔═╡ 1885527b-2fb8-46e1-99a5-a21e0efd0358
 let
-	xt = tackpoint_LS(x0, x_tar_c, maxiter, vel_wind, wind_dir, step_inc)
+	params = [x0, x_tar_c, vel_wind, wind_dir, maxiter]
+	xt = tackpoint_LS(params)
 	# calculate single tack path
 	t0 = now() # record start time of function
 	target_tol = 4 # radius in metres within target to qualify
@@ -493,9 +516,10 @@ md""" #### Gradient Descent
 
 # ╔═╡ 664f2131-553d-4a89-ac5f-cf8138c59b4d
 let
-	maxiter = 100
-	
-	xt_GD = tackpoint_GD(x0, x_tar_c, maxiter, vel_wind, wind_dir, step_inc)
+	params = [x0, x_tar_c, vel_wind, wind_dir, maxiter]
+	xt_GD = tackpoint_GD(params)
+
+	print(xt_GD)
 
 	# calculate single tack path
 	t0 = now() # record start time of function
@@ -2035,30 +2059,32 @@ version = "1.4.1+0"
 """
 
 # ╔═╡ Cell order:
-# ╠═72906394-a47b-4e7a-98b4-e3c41e68dd4d
+# ╟─72906394-a47b-4e7a-98b4-e3c41e68dd4d
 # ╟─12fbea7a-e6bf-46a4-ab03-44bd10e7e256
-# ╟─bbbf78d6-7bf0-4eb0-883b-9bc8f98a18d3
+# ╟─7c54bb74-2116-4540-9dbd-f10d49e3a3bd
+# ╠═bbbf78d6-7bf0-4eb0-883b-9bc8f98a18d3
 # ╟─cea4baae-51e5-43a6-a64f-a11e3d474fb6
 # ╟─1f442a09-9b34-4644-949d-b649187470c2
 # ╟─75802d02-ee43-4028-ab28-483f9af7a54c
 # ╟─c279c555-7d66-481e-b332-8519fba0f950
 # ╟─3fdab425-52ef-4be5-a8a2-425cd2a786ef
 # ╟─d0019978-aa34-4f54-b4b7-4d607274b5a6
+# ╟─913610b3-1ecd-49e1-a692-41c86ef0431e
+# ╠═f65b308e-8764-4c2b-851b-aa16d1277041
+# ╠═4cca6d78-7c80-46de-b055-c59d457e93a3
+# ╟─81c03358-1a48-4c33-802a-f2bfbf89f6d7
+# ╟─0cbef7ea-c480-4679-88a2-f9e929f3c676
+# ╠═b1b865d3-e4cd-4850-adba-9462b5930929
 # ╟─159b8d41-a5ce-494a-9566-df34547b1a8d
 # ╟─e9c2610f-f94d-4426-be0f-d11d8e1498ab
 # ╠═546844bf-3e36-4e9f-9bc9-aeb92649b108
 # ╟─d628a011-a1fb-4947-8da1-2a1c7e2cf048
 # ╠═4622c7a9-a35c-44ef-9c4a-e6d09faa6e08
-# ╟─81c03358-1a48-4c33-802a-f2bfbf89f6d7
-# ╟─0cbef7ea-c480-4679-88a2-f9e929f3c676
-# ╠═b1b865d3-e4cd-4850-adba-9462b5930929
-# ╟─913610b3-1ecd-49e1-a692-41c86ef0431e
-# ╠═f65b308e-8764-4c2b-851b-aa16d1277041
-# ╠═4cca6d78-7c80-46de-b055-c59d457e93a3
 # ╟─6ff92112-41d4-47bb-9eb0-4a2499f386fd
 # ╠═c315d2b8-1a38-4ae1-b6d1-151b1a99cd20
+# ╟─3fc06973-839c-47d4-b0ca-2cdef798d5ca
 # ╟─fe1536be-8589-48ea-bbb8-9df739c4766c
-# ╠═868a916b-1aa3-4f6d-acf8-84f9b955b3e5
+# ╟─868a916b-1aa3-4f6d-acf8-84f9b955b3e5
 # ╟─4d896f17-c83f-42cc-8931-77ef6a0b2802
 # ╟─5c858f72-fcda-45b5-b9a3-036e5cc2d9e9
 # ╠═1885527b-2fb8-46e1-99a5-a21e0efd0358
