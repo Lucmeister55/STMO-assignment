@@ -147,7 +147,7 @@ function my_acos(x)
     end
 end
 
-# ╔═╡ 4cca6d78-7c80-46de-b055-c59d457e93a3
+# ╔═╡ 55281d8b-38a7-465c-8419-e90ac5c316ab
 function pathtime(xt, cons, theta_nogo = deg2rad(40))
 	x0, x_tar_c, vel_wind, wind_dir, maxiter = cons
 	
@@ -186,13 +186,17 @@ function pathtime(xt, cons, theta_nogo = deg2rad(40))
             # calculate velocity made good
             u = cos(theta_rd)*(vel_wind/cos(theta_nogo))*(1+0.01*velcons)^((abs(theta_rw-theta_nogo)*180)/(pi*deg_int))
             # check if within deadzone
-            v = (rad2deg(my_acos(dot(heading,wind_dir)/(norm(heading)*norm(wind_dir))))<140) ? u : 0
+            v = (my_acos(dot(heading,-wind_dir)/(norm(heading)*norm(-wind_dir)))>theta_nogo)*u
         elseif dot(wind_dir,heading)/(norm(wind_dir)*norm(heading)) > 0
             # calculate velocity made good if downwind
             v = cos(theta_rd)*(vel_wind/cos(theta_nogo))*(1+0.01*velcons)^((abs(pi-theta_rw-theta_nogo)*180)/(pi*deg_int))
         end
         
-        vel_tack = v/cos(theta_rd)
+        if abs(cos(theta_rd)) > 1e-6
+		    vel_tack = v / cos(theta_rd)
+		else
+		    vel_tack = 0.0  # or any other appropriate value
+		end
         
         if vel_tack > 10e-2
             # time elapsed in increment
@@ -221,112 +225,24 @@ function pathtime(xt, cons, theta_nogo = deg2rad(40))
         theta_rw = real(my_acos(dot(heading,wind_dir)/(norm(heading)*norm(wind_dir))))
         if dot(wind_dir,heading)/(norm(wind_dir)*norm(heading)) < 0
             u = cos(theta_rd)*(vel_wind/cos(theta_nogo))*(1+0.01*velcons)^((abs(theta_rw-theta_nogo)*180)/(pi*deg_int))
-            v = (rad2deg(my_acos(dot(heading,wind_dir)/(norm(heading)*norm(wind_dir)))) < 140)*u
+            v = (my_acos(dot(heading,-wind_dir)/(norm(heading)*norm(-wind_dir)))>theta_nogo)*u
         elseif dot(wind_dir,heading)/(norm(wind_dir)*norm(heading)) > 0
             v = cos(theta_rd)*(vel_wind/cos(theta_nogo))*(1+0.01*velcons)^((abs(pi-theta_rw-theta_nogo)*180)/(pi*deg_int))
         end
-        vel_tack = v/cos(theta_rd)
+		
+		if abs(cos(theta_rd)) > 1e-6
+		    vel_tack = v / cos(theta_rd)
+		else
+		    vel_tack = 0.0  # or any other appropriate value
+		end
+		
         if vel_tack > 10e-2
             time_increment_2 = 0.1/vel_tack
             time_elapsed_2 = time_elapsed_2 + time_increment_2
             xc = 0.1*heading/norm(heading) + xc
             step_c_2 = step_c_2 + 1
         elseif vel_tack < 10e-2
-            time_elapsed_1 = 10e6
-            break
-        end
-    end
-    t_2 = time_elapsed_2
-    t = t_1+t_2
-    return t
-end
-
-# ╔═╡ 55281d8b-38a7-465c-8419-e90ac5c316ab
-function pathtime_edit(xt, cons, theta_nogo = deg2rad(40))
-	x0, x_tar_c, vel_wind, wind_dir, maxiter = cons
-	
-    # x_tar_c = active target
-    # x0 = current position
-    # xt = tack coordinates
-
-    velcons = 3 # velocity increase constant
-    deg_int = 5 # constant provided by manufacture
-	step_inc = 0.1
-    
-    # tack vector 1
-    tack_vect_1 = xt - x0 
-    # tack vector 2
-    tack_vect_2 = x_tar_c - xt
-    
-    # divide it into increments of .1 metres
-    steps_1 = norm(xt - x0)/step_inc
-    # set initial step
-    step_c_1 = 0
-    heading = tack_vect_1
-    xc = x0
-    time_elapsed_1 = 0
-    
-    while step_c_1 < steps_1
-        # vector to target from current x
-        target_vect = x_tar_c - xc 
-        
-        # calculate angle between heading and target vector
-        theta_rd = real(my_acos(dot(heading, target_vect)/(norm(heading)*norm(target_vect))))
-        
-        # calculate angle between heading and wind direction
-        theta_rw = real(my_acos(dot(heading,wind_dir)/(norm(heading)*norm(wind_dir))))
-        
-        if dot(wind_dir, heading)/(norm(wind_dir)*norm(heading)) < 0
-            # calculate velocity made good
-            u = cos(theta_rd)*(vel_wind/cos(theta_nogo))*(1+0.01*velcons)^((abs(theta_rw-theta_nogo)*180)/(pi*deg_int))
-            # check if within deadzone
-            v = (rad2deg(my_acos(dot(heading,wind_dir)/(norm(heading)*norm(wind_dir))))<140) * u
-        elseif dot(wind_dir,heading)/(norm(wind_dir)*norm(heading)) > 0
-            # calculate velocity made good if downwind
-            v = cos(theta_rd)*(vel_wind/cos(theta_nogo))*(1+0.01*velcons)^((abs(pi-theta_rw-theta_nogo)*180)/(pi*deg_int))
-        end
-        
-        vel_tack = v/cos(theta_rd)
-        
-        if vel_tack > 10e-2
-            # time elapsed in increment
-            time_increment_1 = 0.1/vel_tack 
-            time_elapsed_1 += time_increment_1
-            xc += 0.1*heading/norm(heading)
-            step_c_1 += 1
-        elseif vel_tack < 10e-2
-            time_elapsed_1 = 10e6
-            break
-        end
-    end
-    
-    t_1 = time_elapsed_1
-    
-    # divide it into increments of .1 metres
-    steps_2 = norm(x_tar_c - xt)/step_inc
-    # set initial step
-    step_c_2 = 0
-    heading = tack_vect_2
-    xc = xt
-    time_elapsed_2 = 0
-    while step_c_2 < steps_2
-        target_vect = x_tar_c - xc
-        theta_rd = real(my_acos(dot(heading,target_vect)/(norm(heading)*norm(target_vect))))
-        theta_rw = real(my_acos(dot(heading,wind_dir)/(norm(heading)*norm(wind_dir))))
-        if dot(wind_dir,heading)/(norm(wind_dir)*norm(heading)) < 0
-            u = cos(theta_rd)*(vel_wind/cos(theta_nogo))*(1+0.01*velcons)^((abs(theta_rw-theta_nogo)*180)/(pi*deg_int))
-            v = (rad2deg(my_acos(dot(heading,wind_dir)/(norm(heading)*norm(wind_dir)))) < 140)*u
-        elseif dot(wind_dir,heading)/(norm(wind_dir)*norm(heading)) > 0
-            v = cos(theta_rd)*(vel_wind/cos(theta_nogo))*(1+0.01*velcons)^((abs(pi-theta_rw-theta_nogo)*180)/(pi*deg_int))
-        end
-        vel_tack = v/cos(theta_rd)
-        if vel_tack > 10e-2
-            time_increment_2 = 0.1/vel_tack
-            time_elapsed_2 = time_elapsed_2 + time_increment_2
-            xc = 0.1*heading/norm(heading) + xc
-            step_c_2 = step_c_2 + 1
-        elseif vel_tack < 10e-2
-            time_elapsed_1 = 10e6
+            time_elapsed_2 = 10e6
             break
         end
     end
@@ -360,7 +276,7 @@ md""" #### Backtracking Line Search
 # ╔═╡ b1b865d3-e4cd-4850-adba-9462b5930929
 function backtracking_line_search(f, x0, Dx, cons, c=0.01, rho=0.1)
     
-	alpha=100
+	alpha=30
 	
     while (f(x0 + alpha*Dx, cons) > f(x0, cons) + alpha * c * transpose(-Dx)*Dx)
         alpha *= rho
@@ -385,7 +301,7 @@ function constraint_satisfied(xt, cons, theta_nogo = deg2rad(50))
     theta_rw_2 = real(my_acos(dot(tack_vect_2, -wind_dir) / (norm(tack_vect_2) * norm(-wind_dir))))
     
     # Check if both angle constraints are satisfied
-    if theta_rw_1 > theta_nogo && theta_rw_2 > theta_nogo
+    if theta_rw_1 >= theta_nogo && theta_rw_2 >= theta_nogo
         return true
     else
         return false
@@ -429,10 +345,8 @@ function initial_xt_rand(x0, x_tar_c, wind_dir, theta_nogo = deg2rad(50))
 	
     max_iter = 1000  # Maximum number of attempts to find a feasible starting point
     
-    for _ in 1:max_iter
-        xt = [rand(-50:50), rand(calculate_y(-50, mid, wind_dir):calculate_y(50, mid, wind_dir))]  # Generate a random point
-
-		println(xt)
+    for i in 1:max_iter
+        xt = [rand(-100:100), rand(round(calculate_y(-100, mid, wind_dir)):round(calculate_y(100, mid, wind_dir)))]  # Generate a random point
         
         # Check if the angle constraint is satisfied
         tack_vect_1 = xt - x0
@@ -442,7 +356,7 @@ function initial_xt_rand(x0, x_tar_c, wind_dir, theta_nogo = deg2rad(50))
 		theta_rw_2 = my_acos(dot(tack_vect_2, -wind_dir) / (norm(tack_vect_2) * norm(-wind_dir)))
         
         if theta_rw_1 >= theta_nogo && theta_rw_2 >= theta_nogo
-            return xt
+            return theta_rw_1, theta_rw_2, xt
         end
     end
 
@@ -547,8 +461,6 @@ function tackpoint_GD(f, cons, xt0, nu=1e-3)
 
     iter = 0
 
-	#t = 10
-
     while iter < maxiter # set maximum number of iterations
         
 		Dx = -grad_f(f, xt, cons)
@@ -559,7 +471,7 @@ function tackpoint_GD(f, cons, xt0, nu=1e-3)
 		
 		t = backtracking_line_search(f, xt, Dx, cons)
 
-		if constraint_satisfied(xt, cons)
+		if constraint_satisfied(xt+Dx*t, cons)
             xt += t * Dx
         else
             xt -= t * Dx
@@ -581,15 +493,13 @@ md""" #### Newton's Method
 """
 
 # ╔═╡ f0a5869c-e3eb-425d-aab4-02b8018ee6a3
-function tackpoint_NM(f, cons, xt0 = nothing, epsilon=1e-5)
+function tackpoint_NM(f, cons, xt0 = nothing, epsilon=1e-3)
 	
 	x0, x_tar_c, vel_wind, wind_dir, maxiter = cons
 	
 	xt = xt0
 
     iter = 0
-
-	#t = 10
 
     while iter < maxiter # set maximum number of iterations
         
@@ -678,7 +588,6 @@ function track(x0, x_tar, wind_dir, target_tol)
 				println("Heading relative to wind before tack "*string(tacknr)*": " *string(Int64(round(rad2deg(a_tw))))*"°")
             end
         end
-        #println("Distance to " * next * ": " * string(norm(x_tar_c - xp)))
     end
     return x, y
 end
@@ -727,16 +636,16 @@ md""" ### Basic course
 # ╔═╡ fe1536be-8589-48ea-bbb8-9df739c4766c
 md""" #### Parameter Options:
 **Starting point**\
-`X` : $(@bind x0_x Slider(-50:50, default=20, show_value=true))\
+`X` : $(@bind x0_x Slider(-50:50, default=0, show_value=true))\
 `Y` : $(@bind x0_y Slider(-50:50, default=0, show_value=true))\
 **Destination point**\
-`X` : $(@bind x_tar_x Slider(-50:50, default=0, show_value=true))\
+`X` : $(@bind x_tar_x Slider(-50:50, default=20, show_value=true))\
 `Y` : $(@bind x_tar_y Slider(-50:50, default=50, show_value=true))\
 **Wind**\
 `Wind velocity (m/s)` : $(@bind vel_wind Slider(1:10, default=5, show_value=true))\
 `Wind direction (origin)` : $(@bind wind_dir_temp Select(["N", "NE", "E", "SE", "S", "SW", "W", "NW"], default="N"))\
 **Algorithm**\
-`Maximum iterations` : $(@bind maxiter Slider(1:1000, default=100, show_value=true))\
+`Maximum iterations` : $(@bind maxiter Slider(100:100:1000, default=100, show_value=true))\
 """
 
 # ╔═╡ 868a916b-1aa3-4f6d-acf8-84f9b955b3e5
@@ -778,7 +687,6 @@ let
 
 	# Record elapsed time
 	solvertime = (now() - t0)
-	println()
 	println("Time until convergence: " * string(solvertime))
 	println("Total pathtime: " * string(pathtime(xt, cons)))
 
@@ -791,48 +699,59 @@ end
 md""" #### Gradient Descent
 """
 
+# ╔═╡ fdc4ba68-07b7-4dcf-8e6b-d4e55a4f8826
+begin
+	theta_rw_1_GD, theta_rw_2_GD, xt0_GD = initial_xt_rand(x0, x_tar_c, wind_dir)
+		println("Initial point: "*string(xt0_GD))
+		println("Initial heading 1: "*string(rad2deg(theta_rw_1_GD)))
+		println("Initial heading 2: "*string(rad2deg(theta_rw_2_GD)))
+		println()
+end
+
 # ╔═╡ 664f2131-553d-4a89-ac5f-cf8138c59b4d
 let
-	xt0 = initial_xt_rand(x0, x_tar_c, wind_dir)
-	println("Initial point: "*string(xt0))
-	println()
+	xt0_GD = [94.0, 25.0]
 	cons = [x0, x_tar_c, vel_wind, wind_dir, maxiter]
-	
 	t0 = now() # record start time of function
-	xt_GD = tackpoint_GD(pathtime, cons, xt0)
+	xt_GD = tackpoint_GD(pathtime, cons, xt0_GD)
 
 	# Record elapsed time
 	solvertime = (now() - t0)
-	println()
 	println("Time until convergence: " * string(solvertime))
-	println("Total pathtime: " * string(pathtime_edit(xt_GD, cons)))
+	println("Total pathtime: " * string(pathtime(xt_GD, cons)))
 
 	# Plot path
-	cons = [x0, [x_tar_c], vel_wind, wind_dir, maxiter]
-	plot_path([xt_GD], cons)
+	cons_plot = [x0, [x_tar_c], vel_wind, wind_dir, maxiter]
+	plot_path([xt_GD], cons_plot)
 end
 
 # ╔═╡ c8bb9329-3c83-4cff-83bc-de79ab29c5a4
 md""" #### Newton's method
 """
 
+# ╔═╡ f64da374-d99e-4be1-87ca-23261c56a26b
+begin
+	theta_rw_1_NM, theta_rw_2_NM, xt0_NM = initial_xt_rand(x0, x_tar_c, wind_dir)
+		println("Initial point: "*string(xt0_NM))
+		println("Initial heading 1: "*string(rad2deg(theta_rw_1_NM)))
+		println("Initial heading 2: "*string(rad2deg(theta_rw_2_NM)))
+		println()
+end
+
 # ╔═╡ 30cbcfc4-0780-47d2-aec0-d990436e1693
 let
-	#xt0 = initial_xt_rand(x0, x_tar_c, wind_dir)
 	cons = [x0, x_tar_c, vel_wind, wind_dir, maxiter]
-	
 	t0 = now() # record start time of function
-	#xt_NM = tackpoint_NM(pathtime, cons, xt0)
+	xt_NM = tackpoint_NM(pathtime, cons, xt0_NM)
 
 	# Record elapsed time
 	solvertime = (now() - t0)
-	println()
 	println("Time until convergence: " * string(solvertime))
-	println("Total pathtime: " * string(pathtime(xt_GD, cons)))
+	println("Total pathtime: " * string(pathtime(xt_NM, cons)))
 
 	# Plot path
-	cons = [x0, [x_tar_c], vel_wind, wind_dir, maxiter]
-	plot_path([xt_NM], cons)
+	cons_plot = [x0, [x_tar_c], vel_wind, wind_dir, maxiter]
+	plot_path([xt_NM], cons_plot)
 end
 
 # ╔═╡ a1f98368-2ecb-40bc-80d2-b55d4224f2fc
@@ -857,7 +776,7 @@ md""" #### Parameter Options:
 `Wind velocity (m/s)` : $(@bind vel_wind_rc Slider(1:10, default=5, show_value=true))\
 `Wind direction (origin)` : $(@bind wind_dir_temp_rc Select(["N", "NE", "E", "SE", "S", "SW", "W", "NW"], default="N"))\
 **Algorithm**\
-`Maximum iterations` : $(@bind maxiter_rc Slider(1:1000, default=100, show_value=true))\
+`Maximum iterations` : $(@bind maxiter_rc Slider(100:100:1000, default=100, show_value=true))\
 """
 
 # ╔═╡ 13bdfa35-562b-49a5-978a-26c4a4920359
@@ -891,9 +810,10 @@ let
 	for i in 1:length(x_tar_all)-1
 		x0_rc = x_tar_all[i]
 		x_tar_c_rc = x_tar_all[i+1]
-		xt0_rc = initial_xt_rand(x0_rc, x_tar_c_rc, wind_dir_rc)
+		theta_rw_1_rc, theta_rw_2_rc, xt0_rc = initial_xt_rand(x0_rc, x_tar_c_rc, wind_dir_rc)
 		println("Initial point: "*string(xt0_rc))
-		println()
+		println("Initial heading 1: "*string(rad2deg(theta_rw_1_rc)))
+		println("Initial heading 2: "*string(rad2deg(theta_rw_2_rc)))
 		cons_rc = [x0_rc, x_tar_c, vel_wind_rc, wind_dir_rc, maxiter_rc]
 		
 		t0 = now() # record start time of function
@@ -1980,7 +1900,6 @@ version = "1.4.1+0"
 # ╟─d0019978-aa34-4f54-b4b7-4d607274b5a6
 # ╟─913610b3-1ecd-49e1-a692-41c86ef0431e
 # ╠═f65b308e-8764-4c2b-851b-aa16d1277041
-# ╠═4cca6d78-7c80-46de-b055-c59d457e93a3
 # ╠═55281d8b-38a7-465c-8419-e90ac5c316ab
 # ╠═76c07283-c73b-4b3d-9396-e7f704bf7312
 # ╠═99f4fcca-19bc-4a80-8472-198ed377abd0
@@ -2005,14 +1924,16 @@ version = "1.4.1+0"
 # ╟─d4da9d8c-2064-4d1f-b397-4092ef0de660
 # ╠═52a9641b-ea4c-45ce-b52f-ed3d47570a42
 # ╟─3fc06973-839c-47d4-b0ca-2cdef798d5ca
-# ╠═7c4e4208-944b-4c7e-a2fd-6275d2347a19
-# ╠═fe1536be-8589-48ea-bbb8-9df739c4766c
+# ╟─7c4e4208-944b-4c7e-a2fd-6275d2347a19
+# ╟─fe1536be-8589-48ea-bbb8-9df739c4766c
 # ╟─868a916b-1aa3-4f6d-acf8-84f9b955b3e5
 # ╟─5c858f72-fcda-45b5-b9a3-036e5cc2d9e9
 # ╠═1885527b-2fb8-46e1-99a5-a21e0efd0358
 # ╟─cb3e7da3-4146-477e-8f24-6a55a1e800c7
+# ╠═fdc4ba68-07b7-4dcf-8e6b-d4e55a4f8826
 # ╠═664f2131-553d-4a89-ac5f-cf8138c59b4d
 # ╟─c8bb9329-3c83-4cff-83bc-de79ab29c5a4
+# ╠═f64da374-d99e-4be1-87ca-23261c56a26b
 # ╠═30cbcfc4-0780-47d2-aec0-d990436e1693
 # ╟─a1f98368-2ecb-40bc-80d2-b55d4224f2fc
 # ╟─e0b1b009-e7a4-47dd-bd17-e32377b2d566
