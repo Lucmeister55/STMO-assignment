@@ -597,7 +597,7 @@ md""" ### Plot Path
 """
 
 # ╔═╡ 52a9641b-ea4c-45ce-b52f-ed3d47570a42
-function plot_path(xt, cons, target_tol = 4)
+function plot_path(xt, cons, target_tol = 5)
 	x0, x_tar_all, vel_wind, wind_dir, maxiter = cons
 
 	x_tar = Array{Float64}(undef, 0, 2)
@@ -710,7 +710,6 @@ end
 
 # ╔═╡ 664f2131-553d-4a89-ac5f-cf8138c59b4d
 let
-	xt0_GD = [94.0, 25.0]
 	cons = [x0, x_tar_c, vel_wind, wind_dir, maxiter]
 	t0 = now() # record start time of function
 	xt_GD = tackpoint_GD(pathtime, cons, xt0_GD)
@@ -814,10 +813,11 @@ let
 		println("Initial point: "*string(xt0_rc))
 		println("Initial heading 1: "*string(rad2deg(theta_rw_1_rc)))
 		println("Initial heading 2: "*string(rad2deg(theta_rw_2_rc)))
+		println()
 		cons_rc = [x0_rc, x_tar_c, vel_wind_rc, wind_dir_rc, maxiter_rc]
 		
 		t0 = now() # record start time of function
-		#xt_GD_temp = tackpoint_GD(pathtime, cons_rc, xt0_rc)
+		xt_GD_temp = tackpoint_GD(pathtime, cons_rc, xt0_rc)
 		push!(xt_GD_rc, xt_GD_temp)
 		pt_temp = pathtime(xt_GD_temp, cons_rc)
 		pt += pt_temp
