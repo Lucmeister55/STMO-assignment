@@ -28,19 +28,17 @@ end
 # ╔═╡ 12fbea7a-e6bf-46a4-ab03-44bd10e7e256
 begin
 	md""" ## Introduction
-	In the last decades, the sport of sailing has experienced an increasing impact
-	of new technologies, and notably of scientific computing. Among all computational problems relevant for sailing, we are interested here in route planning
-	and race strategy, i.e., the optimization of the yacht route.
-	
-	This project focuses on developing algorithms that address the issue of optimizing a sailboat’s trajectory when a starting point and destination are given alongside static wind conditions. The underlying physics that govern the optimal path of a sailboat for a given set of conditions are highly coupled and dynamic, rendering the course very unintuitive to determine. Algorithms that are able to produce the path plan that takes the minimum amount of time to complete the course can be very helpful.
-	
-	Algorithms developed in this project use the idea of calculating the Velocity Made Good (VMG) as a parameter relating the state of the sailboat at any given time to the time it would take to complete a given course. 
-	
-	Before going into details about how the models work, some basic sailing theory is introduced. It is not possible for boats to sail directly into the wind, requiring the course of the boat to alternate between headings. This process is called "tacking" and is used commonly by sailors to make their way to a mark that is upwind. On a tack, the sailor will generally point the sailboat as close to the wind as possible while still keeping the winds blowing through the sails in a manner that provides aerodynamic lift to propel the boat.
-	
-	Then the boat is turned away from the wind in slight increments in order to generate more forward lift on the sails, allowing it to move with greater speed, but less directly toward the destination. The range of heading that does not produce any significant lift is called the no-go zone.
-
 	$(Resource("https://github.com/Lucmeister55/STMO-assignment/blob/main/images/sailing_intro.png?raw=true", :width => 1000, :align => "middle"))
+	
+	In the world of sailing, races are an esteemed test of skill. In the most typical and basic form, the route planning problem requires reaching a windward mark in minimum time, or to simply pass within a certain distance of each marker, indicating the course's track. 
+	
+	Boats cannot sail directly into the wind, necessitating the boat's course to alternate between headings when needing to reach an upwind destination. This maneuver, commonly known as "tacking," is frequently employed by sailors to make progress against the wind. During a tack, the sailor typically aims to position the sailboat as close to the wind as possible while still ensuring the sails catch the wind in a way that generates aerodynamic lift, propelling the boat forward. Following this, the boat is gradually turned away from the wind to generate more lift on the sails, enabling it to move with greater speed but at a less direct path towards the destination. The range of headings that do not produce significant lift is referred to as the "no-go zone."
+	
+	Deriving the optimal heading for any given racecourse is not trivial. The relationship between the wind-heading angle and the sailboat's speed over ground is non-linear, hence the classical reliance on a sailor's intuition instead of simple trigonometry in such matters. Furthermore, every tack imposes an inherent speed penalty due to the sudden drop in momentum, incentivizing a minimal number of tacks to reach a destination as fast as possible. Otherwise, one could feasibly continuously tack in a way that approximates a straight line towards the marker.
+	
+	It should be clear by now that the underlying physics governing the optimal course for a sailboat under specific conditions are complex and dynamic, making it challenging to intuitively determine the path. In the last decades, the sport of sailing has experienced an increasing impact of new technologies, and notably of scientiﬁc computing. Among all computational problems relevant for sailing, we are interested here in route planning and race strategy, i.e., the optimization of the yacht route. 
+	
+	This project aims to develop algorithms that tackle the optimization problem of determining the most efficient path for a sailboat, given a starting point, destination, and static wind conditions. Having algorithms that can generate a path plan resulting in the shortest completion time for the course can be immensely beneficial, and may diverge from expectations set even by expert sailors.
 	"""
 end
 
@@ -50,6 +48,8 @@ md""" ## Methods
 
 # ╔═╡ bbbf78d6-7bf0-4eb0-883b-9bc8f98a18d3
 md""" ### VMG
+Velocity made good, or VMG, is a term used in sailing, especially in yacht racing, indicating the speed of a sailboat towards (or from) the direction of the wind. Instead of sailing directly toward a windward mark, the helmsman chooses a point of sail towards the direction of the wind that maximizes VMG. The helmsman uses VMG to find exactly what the optimum angle against the wind is. At the optimum boat speed and angle to the wind, VMG is maximized, steering closer to the direction of the wind will reduce boat speed, while steering further away from the direction of the wind might give a higher boat speed, but at the cost of a larger deviation in heading, so less progress towards a mark.
+
 The VMG can be calculated by using the following expression where $V_{true}$ is the velocity of the sailboat with respect to stationary ground and $\theta_s$ is the angle between current heading and the direction to destination. 
 
 ``VMG=V_{true}∗\cos(\theta_s)``
@@ -1891,7 +1891,7 @@ version = "1.4.1+0"
 # ╟─72906394-a47b-4e7a-98b4-e3c41e68dd4d
 # ╟─12fbea7a-e6bf-46a4-ab03-44bd10e7e256
 # ╟─7c54bb74-2116-4540-9dbd-f10d49e3a3bd
-# ╟─bbbf78d6-7bf0-4eb0-883b-9bc8f98a18d3
+# ╠═bbbf78d6-7bf0-4eb0-883b-9bc8f98a18d3
 # ╟─cea4baae-51e5-43a6-a64f-a11e3d474fb6
 # ╟─1f442a09-9b34-4644-949d-b649187470c2
 # ╟─75802d02-ee43-4028-ab28-483f9af7a54c
