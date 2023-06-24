@@ -226,6 +226,10 @@ md""" #### Gradient Descent
 md""" #### Newton's method
 """
 
+# ╔═╡ 7aa9d464-0c46-4d89-86c6-ab32d0e4bab9
+md""" #### IP sensitivity analysis (GD)
+"""
+
 # ╔═╡ 80abb0a9-7bf9-46d2-902b-f0067fca76c8
 md""" #### Discussion
 """
@@ -597,11 +601,15 @@ function tackpoint_GD(f, cons, xt0, nu=1e-3)
 	
 	x0, x_tar_c, vel_wind, wind_dir, maxiter = cons
 	
-	xt = xt0
+	xt_all = [xt0]
+
+	f_all = [pathtime(xt0, cons)]
 
     iter = 0
 
     while iter < maxiter # set maximum number of iterations
+
+		xt = xt_all[end]
         
 		Dx = -grad_f(f, xt, cons)
 
@@ -617,6 +625,9 @@ function tackpoint_GD(f, cons, xt0, nu=1e-3)
             xt -= t * Dx
         end
 
+		push!(xt_all, xt)
+		push!(f_all, pathtime(xt, cons))
+
         iter += 1
 
 		println("Iteration: " * string(iter))
@@ -625,7 +636,40 @@ function tackpoint_GD(f, cons, xt0, nu=1e-3)
         println("New tack point: " * string(xt))
 		println()
     end
-    return xt
+    return xt_all, f_all
+end
+
+# ╔═╡ eb41932c-e69a-48f5-ad72-6a3552a46117
+let
+	x_sol = []
+	y_sol = []
+	
+	x_init = []
+	y_init = []
+	
+	for i in 1:10
+		theta_rw_1_GD, theta_rw_2_GD, xt0_GD = initial_xt_rand(x0, x_tar_c, wind_dir)
+
+		cons = [x0, x_tar_c, vel_wind, wind_dir, maxiter]
+		xt_GD_temp, f = tackpoint_GD(pathtime, cons, xt0_GD)
+
+		push!(x_sol, xt_GD_temp[end][1])
+		push!(y_sol, xt_GD_temp[end][2])
+		
+		push!(x_init, xt0_GD[1])
+		push!(y_init, xt0_GD[2])
+	end
+	
+	scatter(x_sol, y_sol, label = "Solutions")
+	scatter!(x_init, y_init, label = "Initial points")
+	scatter!([x_tar_c[1]], [x_tar_c[2]], label = "Destination")
+	scatter!([x0[1]], [x0[2]], label = "Starting point")
+
+	for i in 1:10
+		plot!([x_sol[i], x_init[i]], [y_sol[i], y_init[i]], label = "")
+	end
+
+	plot!()
 end
 
 # ╔═╡ f0a5869c-e3eb-425d-aab4-02b8018ee6a3
@@ -736,7 +780,7 @@ function plot_path(xt, cons, target_tol = 5)
 	x, y = track(x0, x_tar, wind_dir, target_tol)
 
 	# Plot route
-	scatter(x, y, label = "Boat route")
+	scatter(x, y, label = "Boat route", xlabel = "x(m)", ylabel = "y(m)")
 	
 	# Plot the wind vector
 	xw = [x_tar[2, 1], x_tar[2, 1]+wind_dir[1]*10]
@@ -771,10 +815,12 @@ let
 end
 
 # ╔═╡ 664f2131-553d-4a89-ac5f-cf8138c59b4d
-let
+begin
 	cons = [x0, x_tar_c, vel_wind, wind_dir, maxiter]
 	t0 = now() # record start time of function
-	xt_GD = tackpoint_GD(pathtime, cons, xt0_GD)
+	xt_GD_temp, f = tackpoint_GD(pathtime, cons, xt0_GD)
+
+	xt_GD = xt_GD_temp[end]
 
 	# Record elapsed time
 	solvertime = (now() - t0)
@@ -784,6 +830,31 @@ let
 	# Plot path
 	cons_plot = [x0, [x_tar_c], vel_wind, wind_dir, maxiter]
 	plot_path([xt_GD], cons_plot)
+end
+
+# ╔═╡ ece8ec9b-d937-4c6e-96e6-8e13e85136b4
+begin
+	# Convergence path
+	scatter([xt_GD[1]], [xt_GD[2]], label = "Solution", xlabel = "x(m)", ylabel = "y(m)")
+	scatter!([xt0_GD[1]], [xt0_GD[2]], label = "Initial point")
+
+	x = []
+	y = []
+	
+	for i in 1:length(xt_GD_temp)
+		push!(x, xt_GD_temp[i][1]) 
+		push!(y, xt_GD_temp[i][2])
+	end
+	
+	plot!(x, y, label = "Trajectory")
+end
+
+# ╔═╡ 43e64f1a-f804-4a9b-85c9-c906c5eacd9c
+begin
+	# Error
+	println(f)
+	plot([1:length(f)], f .- f[end], xlabel = "Iteration", ylabel = "Absolute error",
+	label = "")
 end
 
 # ╔═╡ 30cbcfc4-0780-47d2-aec0-d990436e1693
@@ -817,7 +888,8 @@ let
 		cons_rc = [x0_rc, x_tar_c, vel_wind_rc, wind_dir_rc, maxiter_rc]
 		
 		t0 = now() # record start time of function
-		xt_GD_temp = tackpoint_GD(pathtime, cons_rc, xt0_rc)
+		xt_GD_temp, f = tackpoint_GD(pathtime, cons_rc, xt0_rc)
+		xt_GD_temp = xt_GD_temp[end]
 		push!(xt_GD_rc, xt_GD_temp)
 		pt_temp = pathtime(xt_GD_temp, cons_rc)
 		pt += pt_temp
@@ -1914,17 +1986,21 @@ version = "1.4.1+0"
 # ╟─3fc06973-839c-47d4-b0ca-2cdef798d5ca
 # ╟─7c4e4208-944b-4c7e-a2fd-6275d2347a19
 # ╟─fe1536be-8589-48ea-bbb8-9df739c4766c
-# ╟─868a916b-1aa3-4f6d-acf8-84f9b955b3e5
+# ╠═868a916b-1aa3-4f6d-acf8-84f9b955b3e5
 # ╟─5c858f72-fcda-45b5-b9a3-036e5cc2d9e9
 # ╠═1885527b-2fb8-46e1-99a5-a21e0efd0358
 # ╟─cb3e7da3-4146-477e-8f24-6a55a1e800c7
 # ╠═fdc4ba68-07b7-4dcf-8e6b-d4e55a4f8826
 # ╠═664f2131-553d-4a89-ac5f-cf8138c59b4d
+# ╠═ece8ec9b-d937-4c6e-96e6-8e13e85136b4
+# ╠═43e64f1a-f804-4a9b-85c9-c906c5eacd9c
 # ╟─c8bb9329-3c83-4cff-83bc-de79ab29c5a4
 # ╠═f64da374-d99e-4be1-87ca-23261c56a26b
 # ╠═30cbcfc4-0780-47d2-aec0-d990436e1693
+# ╟─7aa9d464-0c46-4d89-86c6-ab32d0e4bab9
+# ╠═eb41932c-e69a-48f5-ad72-6a3552a46117
 # ╟─80abb0a9-7bf9-46d2-902b-f0067fca76c8
-# ╠═c60d1274-1465-451f-b7c4-ce2587130a39
+# ╟─c60d1274-1465-451f-b7c4-ce2587130a39
 # ╟─a1f98368-2ecb-40bc-80d2-b55d4224f2fc
 # ╟─e0b1b009-e7a4-47dd-bd17-e32377b2d566
 # ╟─13bdfa35-562b-49a5-978a-26c4a4920359
