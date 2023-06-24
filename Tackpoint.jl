@@ -30,13 +30,15 @@ begin
 	md""" ## Introduction
 	$(Resource("https://github.com/Lucmeister55/STMO-assignment/blob/main/images/sailing_intro.png?raw=true", :width => 1000, :align => "middle"))
 	
-	In the world of sailing, races are an esteemed test of skill. In the most typical and basic form, the route planning problem requires reaching a windward mark in minimum time, or to simply pass within a certain distance of each marker, indicating the course's track. 
+	In the world of sailing, races are an esteemed test of skill. Both long and short distance races require careful planning in advance. In the most typical and basic form, the route planning problem requires reaching a windward mark in minimum time, or to simply pass within a certain distance of each marker, indicating the course's track.
 	
-	Boats cannot sail directly into the wind, necessitating the boat's course to alternate between headings when needing to reach an upwind destination. This maneuver, commonly known as "tacking," is frequently employed by sailors to make progress against the wind. During a tack, the sailor typically aims to position the sailboat as close to the wind as possible while still ensuring the sails catch the wind in a way that generates aerodynamic lift, propelling the boat forward. Following this, the boat is gradually turned away from the wind to generate more lift on the sails, enabling it to move with greater speed but at a less direct path towards the destination. The range of headings that do not produce significant lift is referred to as the "no-go zone."
+	One of the central paradigms of sailing is that boats powered solely by wind power cannot sail directly into the wind, necessitating the boat's course to alternate between headings when needing to reach an upwind destination. This maneuver, commonly known as 'tacking', is frequently employed by sailors to make progress against the wind. In the strictest meaning of sailing jargon, tacking refers to turning into the wind, whereas "gybing" indicates a more tumultuous turn away from the wind.
 	
-	Deriving the optimal heading for any given racecourse is not trivial. The relationship between the wind-heading angle and the sailboat's speed over ground is non-linear, hence the classical reliance on a sailor's intuition instead of simple trigonometry in such matters. Furthermore, every tack imposes an inherent speed penalty due to the sudden drop in momentum, incentivizing a minimal number of tacks to reach a destination as fast as possible. Otherwise, one could feasibly continuously tack in a way that approximates a straight line towards the marker.
+	During a tack, the sailor typically aims to position the sailboat as close to the wind as possible while still ensuring the sails catch the wind in a way that generates aerodynamic lift, propelling the boat forward. Following this, the boat is gradually turned away from the wind to generate more lift on the sails, enabling it to move with greater speed but at a less direct path towards the destination. The range of headings that do not produce significant lift is referred to as the 'no-go zone'.
 	
-	It should be clear by now that the underlying physics governing the optimal course for a sailboat under specific conditions are complex and dynamic, making it challenging to intuitively determine the path. In the last decades, the sport of sailing has experienced an increasing impact of new technologies, and notably of scientiﬁc computing. Among all computational problems relevant for sailing, we are interested here in route planning and race strategy, i.e., the optimization of the yacht route. 
+	Deriving the optimal heading for any given racecourse is not trivial, even for experienced sailors. The relationship between the wind-heading angle and the sailboat's speed over ground is non-linear, hence the classical reliance on a sailor's intuition instead of simple trigonometry in such matters. Furthermore, every tack imposes an inherent speed penalty due to the sudden drop in momentum, incentivizing a minimal number of tacks to reach a destination as fast as possible. Otherwise, one could feasibly continuously tack in a way that approximates a straight line towards the marker.
+	
+	It should be clear by now that the underlying physics governing the optimal course for a sailboat under specific conditions are complex and dynamic, making it challenging to intuitively determine the path. In the last decades, the sport of sailing has experienced an increasing impact of new technologies, and notably of scientiﬁc computing. Among all computational problems relevant for sailing, we are interested here in route planning and race strategy, i.e., the optimization of the yacht route.
 	
 	This project aims to develop algorithms that tackle the optimization problem of determining the most efficient path for a sailboat, given a starting point, destination, and static wind conditions. Having algorithms that can generate a path plan resulting in the shortest completion time for the course can be immensely beneficial, and may diverge from expectations set even by expert sailors.
 	"""
@@ -52,7 +54,7 @@ md""" ### VMG
 \
 $(Resource("https://github.com/Lucmeister55/STMO-assignment/blob/main/images/vmg.jpg?raw=true", :width => 1000, :align => "middle"))
 
-Velocity made good, or VMG, is a term used in sailing, especially in yacht racing, indicating the speed of a sailboat towards (or from) the direction of the wind. Instead of sailing directly toward a windward mark, the helmsman chooses a point of sail towards the direction of the wind that maximizes VMG. The helmsman uses VMG to find exactly what the optimum angle against the wind is. At the optimum boat speed and angle to the wind, VMG is maximized, steering closer to the direction of the wind will reduce boat speed, while steering further away from the direction of the wind might give a higher boat speed, but at the cost of a larger deviation in heading, so less progress towards a mark.
+**Velocity made good (VMG)** is a term used in sailing, especially in yacht racing, indicating the speed of a sailboat towards (or from) the direction of the wind. Instead of sailing directly toward a windward mark, the helmsman chooses a point of sail towards the direction of the wind that maximizes VMG, representing the optimum angle against the wind. At the optimum boat speed and angle to the wind, VMG is maximized. Steering closer to the direction of the wind will reduce boat speed, while steering further away from the direction of the wind might give a higher boat speed, but at the cost of a larger deviation in heading, so less progress towards a mark.
 
 The VMG can be calculated by using the following expression where $V_{true}$ is the velocity of the sailboat with respect to stationary ground and $\theta_s$ is the angle between current heading and the direction to destination. 
 
@@ -60,7 +62,7 @@ $$VMG=V_{true}∗\cos(\theta_s)$$
 
 However, the relationship between the true velocity of the sailboat and the true wind velocity depends on what assumptions are made. Some instances take into consideration the fact that a sailboat’s Speed Over Ground increases or decreases relative to the wind direction. In theory, a sailboat’s speed increases while sailing from upwind to a downwind direction. 
 
-Other parameters to factor in include the sail boat’s specifics that depend on the make and design of the boat. These are the 'Velocity Increase Constant', ‘No – Go Zone’ and ‘Degree Interval’, which are normally provided by the manufacturer. The physical meaning of this constant expresses 'the sail boat increases speed by 10% for every X degrees from the wind'. Considering these factors, a True VMG can be calculated using the equations:
+Other parameters to factor in include the sail boat’s specifics that depend on the make and design of the boat. These are the 'Velocity Increase Constant', 'No – Go Zone' and 'Degree Interval', which are normally provided by the manufacturer. The physical meaning of this constant expresses 'the sail boat increases speed by 10% for every X degrees from the wind'. Considering these factors, a True VMG can be calculated using the equations:
 
 For Upwind: 
 
@@ -84,24 +86,26 @@ In the expressions shown above the no-go zone ($\theta_0$), Degree Interval (i) 
 # ╔═╡ cea4baae-51e5-43a6-a64f-a11e3d474fb6
 md""" ### Assumptions
 In order to simplify the optimization problem, the following assumptions are made and incorporated into the models:
-- In this project, only relatively short-range courses are evaluated, where we thus assume that a single tack will suffice to avoid most obstacles and to reach the (next) marker in reasonable time.
-- Effects of manoeuvres on the momentum of the sailboat are not considered. For example, tacking causes the sailboat to lose momentum due to the associated drag and loss of lift during the procedure. The loss of momentum is a transient process and is not modelled for this project.
+- In this project, only relatively short-range courses are evaluated, where we thus assume that a single tack will suffice to avoid most obstacles and to reach the (next) marker in reasonable time. This is mostly to limit the scale and computational burden, but the resulting insights can nevertheless be scaled up to an extent.
+- Effects of manoeuvres on the momentum of the sailboat are not considered. For example, tacking causes the sailboat to lose momentum due to the associated drag and loss of lift during the procedure. The loss of momentum is a transient process and is not modelled for this project. Hence, single tack routes are used to avoid misleading results.
 - True velocity of boat at any point of time is a function of the velocity of wind and heading relative to wind direction only. This implies that at any point these are the only two variables required to calculate how fast the boat will be moving with respect to ground (true velocity) in the direction it is moving.
-- Effects of momentum are not considered. As the expressions shown earlier allow for the calculation of velocity instantaneously, the time-dynamic effects are not modelled. This means that acceleration and deceleration are not taken into account and if the boat moves from a current position to the next position, the momentum is not carried or lost but the position’s assigned momentum is taken up.
+- Effects of momentum are not considered. As the expressions shown earlier allow for the calculation of velocity instantaneously, the time-dynamic effects are not modelled. This means that acceleration and deceleration are not taken into account. Thus, if the boat moves from a current position to the next position, the momentum is not carried or lost but the position’s assigned momentum is taken up.
 - Effects of drag are not considered. The effects of drag considered are only those specified by the velocity increase constant and the no-go zone, both provided by the manufacturer. In reality, this phenomenon will have significant effects limiting the maximum velocity of the sailboat.
-- We assume that no external course modifiers are applied. The tide and the force that the wind exerts on the boat will (among others) influence the boat's true trajectory by "pushing" the boat relative to it's heading, resulting in so-called leeway. Over long distances, this must be accounted for by compensating the boat's heading accordingly. Given assumption 1, we may safely consider this effect negligible over such short distances anyway.
+- We assume that no external course modifiers are applied. The tide and the force that the wind exerts on the boat will (among others) influence the boat's true trajectory by "pushing" the boat relative to it's heading, resulting in so-called leeway. Over long distances, this must be accounted for by compensating the boat's heading accordingly. Given assumption 1, we may safely consider this effect negligible over such short distances.
 """
 
 # ╔═╡ 53145549-fa3a-4dee-ad79-9b9b2d0be4b3
 md""" ### Implementation
-The code for all functions quoted can be found in the Appendices.
+Source code for all functions quoted can be found in the Appendices.
 """
 
-# ╔═╡ 1f442a09-9b34-4644-949d-b649187470c2
-md"""#### Decision Variables
-The algorithms aim to generate paths that minimize the time taken to complete a given course. To describe the sailboats' trajectory, we need the x and y coordinates of the sailboat at specific times. Instead of calculating the coordinates for each time interval, we determine them consecutively. This means that the coordinates $X^{k+1}$ are determined based on the distance and direction relative to $X^k$, rather than being directly dependent on the time step $t^{k+1}$.
+# ╔═╡ 3fdab425-52ef-4be5-a8a2-425cd2a786ef
+md"""#### Model
+The **Single Tack Method (STM)** was developed to ensure that the path generated by the model is highly navigable. Its primary objective is to allow the algorithm to produce a path between two points with a maximum of one tack, thereby simplifying the journey to a two-leg voyage. The algorithm is tasked with determining the optimal tack length and angle that minimize the elapsed time.
 
-The problem of generating a sequence of successive x, y coordinates can be transformed into determining a direction vector and a distance vector from each point to the next. For instance, if we know $X^k$, we can find the next position $X^{k+1}$ by using a direction vector and a step size relative to $X^k$. Consequently, the modeling problem is simplified to finding the optimal sequence of direction vectors (heading), assuming a constant step size.
+It is crucial to note that the model incorporates navigational ease by restricting the number of tacks. As the number of tacks increases, the complexity of the solution process also escalates.
+
+To illustrate this concept, let's consider a scenario where location A serves as the starting point and destination B is set. In order to create a path that permits only one tack, the problem is simplified by identifying a tack point, Ts, where the boat's travel time from A to Ts and Ts to B is less than the time it would take to sail directly from A to T and T to B. Here, T represents an arbitrary tack location. If two tacks were allowed, the algorithm would need to find the optimal combination of two points that result in the shortest elapsed time. However, due to the complex interdependence of the problem, navigating through two dimensions to identify the best combination becomes exceedingly difficult and falls outside the scope of this project.
 """
 
 # ╔═╡ 75802d02-ee43-4028-ab28-483f9af7a54c
@@ -116,12 +120,12 @@ $\textrm{time elapsed} = \sum{\textrm{time step k}}$
 
 The objective is to optimize the path to achieve the lowest time elapsed value for any given course.
 
-This objective function is implemented as the function 'pathtime'. To deal with rounding errors causing the input of the standard arcosine function to lie outside the [-1, 1] domain, an additional function 'my_acos' was written, which removes decimals from any approximations of 1 or -1.
+This objective function is implemented as the function *pathtime*. To deal with rounding errors causing the input of the standard library *arccos* function to lie outside the [-1, 1] domain by chance, an additional function *my_acos* was written, which removes decimals from any approximations of 1 or -1 given as input.
 """
 
 # ╔═╡ c279c555-7d66-481e-b332-8519fba0f950
 md"""#### Constraints
-The path optimization problem in question has only one constraint: the boat must never bear a heading into the no-go zone at any given moment. However, in real-life scenarios, during a tack, the boat temporarily faces the no-go zone before regaining lift in the sails. It is the boat's momentum that enables it to steer away from the no-go zone and resume forward motion. It is important to note that the models presented in the report do not incorporate the boat's momentum terms. Consequently, if the algorithm produces a path that involves a heading into the no-go zone, the boat loses its velocity and cannot proceed further. To address this issue, the algorithms overcome this flaw by constantly restricting the heading from entering the no-go zone. This is also verified using the 'constrain_satisfied' function within the minimization algorithms to make absolutely sure that the convergence path stays in the feasible zone.
+The path optimization problem in question has only one constraint: the boat must never bear a heading into the no-go zone at any given moment. However, in real-life scenarios, during a tack, the boat temporarily faces the no-go zone before regaining lift in the sails. It is the boat's momentum that enables it to steer away from the no-go zone and resume forward motion. It is important to note that the models presented in the report do not incorporate the boat's momentum terms. Consequently, if the algorithm produces a path that involves a heading into the no-go zone, the boat loses its velocity and cannot proceed further. To address this issue, the algorithms overcome this flaw by constantly restricting the heading from entering the no-go zone. This is additionally verified using the 'constrain_satisfied' function within the minimization algorithms to make absolutely sure that the convergence path stays in the feasible zone for every iteration (see further).
 
 When travelling upwind,
 
@@ -131,44 +135,35 @@ $\theta_0$ = no-go zone\
 $\theta_w$ = heading relative to wind direction\
 """
 
-# ╔═╡ 3fdab425-52ef-4be5-a8a2-425cd2a786ef
-md"""#### Model
-The Single Tack Method (STM) was developed to ensure that the path generated by the model is highly navigable. Its primary objective is to allow the algorithm to produce a path between two points with a maximum of one tack, thereby simplifying the journey to a two-leg voyage. The algorithm is tasked with determining the optimal tack length and angle that minimize the elapsed time.
-
-It is crucial to note that the model incorporates navigational ease by restricting the number of tacks. As the number of tacks increases, the complexity of the solution process also escalates.
-
-To illustrate this concept, let's consider a scenario where location A serves as the starting point and destination B is set. In order to create a path that permits only one tack, the problem is simplified by identifying a tack point, Ts, where the boat's travel time from A to Ts and Ts to B is less than the time it would take to sail directly from A to T and T to B. Here, T represents an arbitrary tack location. If two tacks were allowed, the algorithm would need to find the optimal combination of two points that result in the shortest elapsed time. However, due to the complex interdependence of the problem, navigating through two dimensions to identify the best combination becomes exceedingly difficult and falls outside the scope of this project.
-"""
-
 # ╔═╡ 2d8cc079-7680-47b1-b062-f15c7adb693e
 md""" #### Minimization Algorithms
 
-A (brute force) line search method is first used ('tackpoint\_LS'), followed by gradient descent ('tackpoint\_GD') and Newton's method ('tackpoint\_NM') for performance comparison.
+A (brute force) line search method is first used (*tackpoint\_LS*), followed by gradient descent (*tackpoint\_GD*) and Newton's method (*tackpoint\_NM*) for performance comparison.
 
-For the line search, the starting point and the current destination is specified. The programme then calculates an initial feasible point for the tack location. The model employs a pattern search algorithm incorporating an accelerating/decelerating step size. The pattern search algorithm requires to start in the feasible region because starting in the no-go zone results in an infinite path time value.
+For the line search, the starting point and the current destination is specified. The model employs a pattern search algorithm incorporating an accelerating/decelerating step size. The pattern search algorithm requires to start in the feasible region because starting in the no-go zone results in an infinite path time value.
 
-Once, the pattern search algorithm is initialised, the path time is calculated in each of the probe directions (x+,y+,x-,y-) using the function handle pathtime. This function handle accepts the starting point of the sailboat, the tack point and the destination point and integrates along the two legs of the journey to find the time elapsed (or the path time). This is the objective function value that needs to be minimised. 
+Once, the pattern search algorithm is initialised, the path time is calculated in each of the probe directions (x+, y+, x-, y-) using the function handle pathtime. This function handle accepts the starting point of the sailboat, the tack point and the destination point and integrates along the two legs of the journey to find the time elapsed (or the path time). This is the objective function value that needs to be minimised. 
 
 With the objective function values from all four probes, the pattern search algorithm chooses the directions in x and y that favour the minimizing of the path time and determines the new tack point. Depending on the search directions (in X and Y) recorded, the pattern search algorithm updates the acceleration terms to reduce the number of pattern moves required to achieve convergence. Once convergence is reached, the optimal tack point (xt) and the optimal time elapsed values are returned.
 
-Gradient Descent uses the 'grad\_f' function to calculate the gradient of the objective function, while Newton's method requires and extra function 'hess\_f' to compute the hessian. Both algorithms take an adaptive step in the direction of the negative gradient. If the new point is in the infeasible region, the search direction is reversed. Convergence criteria and maximum iterations are further specified, with the latter being tunable by the user.
+Gradient Descent uses the *grad\_f* function to calculate the gradient of the objective function, while Newton's method requires and extra function *hess\_f* to compute the hessian. Both algorithms take an adaptive step in the direction of the negative gradient. If the new point is in the infeasible region, the search direction is reversed. Convergence criteria and maximum iterations are further enforced, with the latter being tunable by the user.
 """
 
 # ╔═╡ 76cb13c2-c759-4b6f-a565-91188092a43a
 md""" #### Initial Point
-Two methods are provided to calculate an initial estimate of the solution. It is also possible to allow the user to specify an initial tackpoint, however it was opted to let an algorithm decide due to the ambiguity of the no-go zone. 
+Two methods are provided to calculate an initial estimate of the solution. It is also possible to allow the user to specify an initial tackpoint, however it was opted to let an algorithm decide by default due to the unintuitive relationship between the no-go zone and the choice of tackpoint (effectively deciding the headings). The motivation behind this prudent approach is that the algorithm expects the solutions to stay within the feasible zone, from start to finish.
 
-The first ('initial\_xt\_dev') is based on the deviation of the starting point from the target vector (vector from starting point to destination). This worked fine for the line search due to the accelaration term, but led to time-out issues with Gradient Descent since the resulting initial solutions were often quite extreme. Hence, for Gradient Descent, functions ('initial\_xt\_rand' & 'calculate_y') were written which generate a random feasible point on a line, constituting all points with the same orthogonal distance to both the destination and the starting point (within a reasonable domain for x and y). 
+The first (*initial\_xt\_dev*) is based on the deviation of the starting point from the target vector (vector from starting point to destination). This worked fine for the line search due to the accelaration term, but led to time-out issues for gradient descent in testing, since the resulting initial solutions were often quite extreme and fixed given a certain combination of starting point and destination. Hence, for gradient descent, functions (*initial\_xt\_rand* & *calculate_y*) were written which generate a random feasible point on a line, constituting all points with the same orthogonal distance to both the destination and the starting point (within a reasonable domain for x and y).
 """
 
 # ╔═╡ 0c4f8d11-63e4-4a90-9d39-bfc6e8a11594
 md""" #### Step size
-As stated, the line search employs and accelaration term, which can be viewed as a primitive form of adaptive step size. For Gradient Descent and Newton's Method, a backtracking line search function was implemented ('backtracking\_line\_search').
+As stated, the line search employs and accelaration term, which can be viewed as a primitive form of adaptive step size. For gradient descent and Newton's method, a backtracking line search function was implemented (*backtracking\_line\_search*).
 """
 
 # ╔═╡ 76e424f1-5649-4836-b400-aa8809449fe2
 md""" #### Plotting
-The function 'track' is first run to generate the path taken using the optimal tackpoint solution. This routine accepts a list of all the target markers specified in coordinates and creates a tracking variable that is able to update the active target marker based on whether or not the path has ‘touched’ it. This means that the tracker will let the algorithm know if the path has not passed any of the markers in order. Once the coordinates of the path have been generated, they can be plotted using 'plot\_path'.
+The function *track* is first run to generate the path taken using the optimal tackpoint solution as input. This routine accepts a list of all the target markers specified in coordinates and creates a tracking variable that is able to update the active target marker based on whether or not the path has ‘touched’ it. This means that the tracker will let the algorithm know if the path has not passed any of the markers in order. Once the coordinates of the path have been generated, they can be plotted using *plot\_path*.
 """
 
 # ╔═╡ 3fc06973-839c-47d4-b0ca-2cdef798d5ca
@@ -237,14 +232,14 @@ md""" #### Discussion
 
 # ╔═╡ c60d1274-1465-451f-b7c4-ce2587130a39
 md"""
-Both the line search as well as the Gradient Descent algorithms converge smoothly, with Gradient Descent displaying the fastest convergence due to lessened computational burden that the gradient offers compared to the many indicidual operations carried out by the brute force method every iteration.
+Both the line search as well as the gradient descent algorithms converge smoothly, with gradient descent displaying the fastest convergence due to lessened computational burden that the gradient offers compared to the many individual operations carried out by the brute force method in every iteration. Note that the heading relative to the wind stays outside of the default value for the no-go zone (40°), indicating that these solutions are at the very least viable.
 
-Newton's method never puts a single step due to the convergence criteria being met before one can be made. This may be due to the numerical instability commonly associated with this method combined with the badly conditioned objective function, or due to issues with computing the hessian accurately using standard Julia libraries.
+Newton's method never puts a single step due to the convergence criteria being met before one can be made. This may be due to the numerical instability commonly associated with this method, combined with the badly conditioned objective function, or due to issues related to computing the hessian accurately using Julia libraries.
 """
 
 # ╔═╡ a1f98368-2ecb-40bc-80d2-b55d4224f2fc
 md""" ### Racecourse
-To illustrate a slightly more realistic application, a small racecourse can be specified here by the user, consisting of 3 individual markers that must each be touched as quickly as possible in sequence to complete the course. As Gradient Descent performed the best overall in our single marker course, thia will be our algorithm of choice. Every marker is essentially used once as destination and starting point sequentially.
+To illustrate a slightly more realistic application, a small racecourse can be specified here by the user, consisting of 3 individual markers that must each be touched as quickly as possible in sequence to complete the course. As gradient descent performed the best overall in our single marker course, this will be our algorithm of choice. Every marker is essentially employed once as destination and starting point by the end of the course.
 """
 
 # ╔═╡ e0b1b009-e7a4-47dd-bd17-e32377b2d566
@@ -842,6 +837,16 @@ let
 	cons_rc = [x_tar_all[1], x_tar_all[2:end], vel_wind_rc, wind_dir_rc, maxiter_rc]
 	plot_path(xt_GD_rc, cons_rc)
 end
+
+# ╔═╡ ca0f0c01-95b2-4684-861e-2b595ba2df0e
+md""" ## References
+"""
+
+# ╔═╡ 63da3aab-106b-4faf-b792-bc276d31d237
+md"""
+- Roberto Ferretti and Adriano Festa. 2019. Optimal Route Planning for Sailing Boats: A Hybrid Formulation. J. Optim. Theory Appl. 181, 3 (Jun 2019), 1015–1032. https://doi.org/10.1007/s10957-019-01506-x
+- https://hemanthsarabu.github.io/files/opt_paper.pdf
+"""
 
 # ╔═╡ 00000000-0000-0000-0000-000000000001
 PLUTO_PROJECT_TOML_CONTENTS = """
@@ -1899,10 +1904,9 @@ version = "1.4.1+0"
 # ╟─bbbf78d6-7bf0-4eb0-883b-9bc8f98a18d3
 # ╟─cea4baae-51e5-43a6-a64f-a11e3d474fb6
 # ╟─53145549-fa3a-4dee-ad79-9b9b2d0be4b3
-# ╟─1f442a09-9b34-4644-949d-b649187470c2
-# ╟─75802d02-ee43-4028-ab28-483f9af7a54c
-# ╟─c279c555-7d66-481e-b332-8519fba0f950
 # ╟─3fdab425-52ef-4be5-a8a2-425cd2a786ef
+# ╠═75802d02-ee43-4028-ab28-483f9af7a54c
+# ╟─c279c555-7d66-481e-b332-8519fba0f950
 # ╟─2d8cc079-7680-47b1-b062-f15c7adb693e
 # ╟─76cb13c2-c759-4b6f-a565-91188092a43a
 # ╟─0c4f8d11-63e4-4a90-9d39-bfc6e8a11594
@@ -1920,7 +1924,7 @@ version = "1.4.1+0"
 # ╠═f64da374-d99e-4be1-87ca-23261c56a26b
 # ╠═30cbcfc4-0780-47d2-aec0-d990436e1693
 # ╟─80abb0a9-7bf9-46d2-902b-f0067fca76c8
-# ╟─c60d1274-1465-451f-b7c4-ce2587130a39
+# ╠═c60d1274-1465-451f-b7c4-ce2587130a39
 # ╟─a1f98368-2ecb-40bc-80d2-b55d4224f2fc
 # ╟─e0b1b009-e7a4-47dd-bd17-e32377b2d566
 # ╟─13bdfa35-562b-49a5-978a-26c4a4920359
@@ -1940,5 +1944,7 @@ version = "1.4.1+0"
 # ╠═f0a5869c-e3eb-425d-aab4-02b8018ee6a3
 # ╠═c315d2b8-1a38-4ae1-b6d1-151b1a99cd20
 # ╠═52a9641b-ea4c-45ce-b52f-ed3d47570a42
+# ╟─ca0f0c01-95b2-4684-861e-2b595ba2df0e
+# ╟─63da3aab-106b-4faf-b792-bc276d31d237
 # ╟─00000000-0000-0000-0000-000000000001
 # ╟─00000000-0000-0000-0000-000000000002
