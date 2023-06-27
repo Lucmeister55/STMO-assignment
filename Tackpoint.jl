@@ -1,5 +1,5 @@
 ### A Pluto.jl notebook ###
-# v0.19.26
+# v0.19.22
 
 using Markdown
 using InteractiveUtils
@@ -62,7 +62,7 @@ $$VMG=V_{true}∗\cos(\theta_s)$$
 
 However, the relationship between the true velocity of the sailboat and the true wind velocity depends on what assumptions are made. Some instances take into consideration the fact that a sailboat’s Speed Over Ground increases or decreases relative to the wind direction. In theory, a sailboat’s speed increases while sailing from upwind to a downwind direction. 
 
-Other parameters to factor in include the sail boat’s specifics that depend on the make and design of the boat. These are the 'Velocity Increase Constant', 'No – Go Zone' and 'Degree Interval', which are normally provided by the manufacturer. The physical meaning of this constant expresses 'the sail boat increases speed by 10% for every X degrees from the wind'. Considering these factors, a True VMG can be calculated using the equations:
+Other parameters to factor in include the sail boat’s specifics that depend on the make and design of the boat. These are the 'Velocity Increase Constant' (VIC), 'no – go zone' and 'degree interval', which are normally provided by the manufacturer. The physical meaning of this constant expresses: 'the sail boat increases speed by 10% for every X degrees from the wind'. Considering these factors, a true VMG can be calculated using the equations:
 
 For Upwind: 
 
@@ -73,12 +73,12 @@ For Downwind:
 $$VMG=\frac{V_w}{\cos(\theta_0)}*(1+\beta)^{\frac{|180°-\theta_0-\theta_\gamma|}{i}}*\cos(\theta_s)$$
 
 VMG = Velocity Made Good towards destination\
-$V_w$ = Velocity of wind\
-$\theta_s$ = Angle between heading and destination\
-$\theta_0$ = No-go zone\
-$\theta_\gamma$ = Angle between wind direction and heading\
-$\beta$ = Velocity increase constant\
-i = Degree Interval
+$V_w$ = velocity of wind\
+$\theta_s$ = angle between heading and destination\
+$\theta_0$ = no-go zone\
+$\theta_\gamma$ = angle between wind direction and heading\
+$\beta$ = velocity increase constant\
+i = degree Interval
 
 In the expressions shown above the no-go zone ($\theta_0$), Degree Interval (i) and Velocity Increase Constant ($\beta$) are usually provided by the manufacturer. As these are specific to the boat’s design, commonly quoted values are used throughout this project.
 """
@@ -226,17 +226,17 @@ md""" #### Gradient Descent
 md""" #### Newton's method
 """
 
-# ╔═╡ 7aa9d464-0c46-4d89-86c6-ab32d0e4bab9
-md""" #### IP sensitivity analysis (GD)
-"""
-
 # ╔═╡ 80abb0a9-7bf9-46d2-902b-f0067fca76c8
 md""" #### Discussion
 """
 
 # ╔═╡ c60d1274-1465-451f-b7c4-ce2587130a39
 md"""
-Both the line search as well as the gradient descent algorithms converge smoothly, with gradient descent displaying the fastest convergence due to lessened computational burden that the gradient offers compared to the many individual operations carried out by the brute force method in every iteration. Note that the heading relative to the wind stays outside of the default value for the no-go zone (40°), indicating that these solutions are at the very least viable.
+Both the line search as well as the gradient descent algorithms converge smoothly, with gradient descent displaying the fastest convergence due to lessened computational burden that the gradient offers compared to the many individual operations carried out by the brute force method in every iteration. Note that the heading relative to the wind (usually) stays outside of the default value for the no-go zone (40°), indicating that these solutions are at the very least viable.
+
+Due to the norm of the gradient staying approximately constant for every iteration, the step size computed with the backtracking line search ends up not being any different from employing a fixed step size (namely 25). The solution stays stable for varying initial points for the most part, with the very occasional alternative local minimum detected. 
+
+A seemingly strange phenomenon is that the solution oscillates around the optimum when the initial point starts near it (leading to faster than average convergence). This is caused by the makeshift constraint boundary, forcing the search direction to invert when faced with the danger of entering the no-go zone. Hence, an interesting (but still somewhat intuitive) insight is that it may be a good idea in general to stay as close to the no-go zone as possible when wanting to reach an upwind marker to maximize VMG. This oscillating behavior will admittedly compromise the pinpoint accuracy of the solution. However, in sailing, a deviation of around one meter for a tackpoint can be considered negligible.
 
 Newton's method never puts a single step due to the convergence criteria being met before one can be made. This may be due to the numerical instability commonly associated with this method, combined with the badly conditioned objective function, or due to issues related to computing the hessian accurately using Julia libraries.
 """
@@ -425,11 +425,11 @@ function hess_f(func, point, constants)
 end
 
 # ╔═╡ b1b865d3-e4cd-4850-adba-9462b5930929
-function backtracking_line_search(f, x0, Dx, cons, c=0.01, rho=0.1)
+function backtracking_line_search(f, x0, Dx, cons, c=0.01, rho=0.7)
     
-	alpha=30
+	alpha = 25
 	
-    while (f(x0 + alpha*Dx, cons) > f(x0, cons) + alpha * c * transpose(-Dx)*Dx)
+    while (f(x0 + alpha*Dx, cons) > f(x0, cons) + alpha * c * dot(-Dx, Dx))
         alpha *= rho
 	end
 	
@@ -437,7 +437,7 @@ function backtracking_line_search(f, x0, Dx, cons, c=0.01, rho=0.1)
 end
 
 # ╔═╡ bfb209de-c20b-455a-b45e-9f544d4877b0
-function constraint_satisfied(xt, cons, theta_nogo = deg2rad(50))
+function constraint_satisfied(xt, cons, theta_nogo = deg2rad(41))
     x0, x_tar_c, vel_wind, wind_dir, maxiter = cons
     
     # Calculate the angle between wind direction and tack vectors
@@ -613,6 +613,8 @@ function tackpoint_GD(f, cons, xt0, nu=1e-3)
         
 		Dx = -grad_f(f, xt, cons)
 
+		println(norm(-Dx))
+
 		if norm(-Dx) <= nu
             break  # converged
 		end
@@ -660,7 +662,7 @@ let
 		push!(y_init, xt0_GD[2])
 	end
 	
-	scatter(x_sol, y_sol, label = "Solutions")
+	scatter(x_sol, y_sol, label = "Solutions", title = "Initial point sensitivity")
 	scatter!(x_init, y_init, label = "Initial points")
 	scatter!([x_tar_c[1]], [x_tar_c[2]], label = "Destination")
 	scatter!([x0[1]], [x0[2]], label = "Starting point")
@@ -799,7 +801,7 @@ end
 # ╔═╡ 1885527b-2fb8-46e1-99a5-a21e0efd0358
 let
 	xt0 = initial_xt_dev(x0, x_tar_c)
-	cons = [x0, x_tar_c, vel_wind, wind_dir, maxiter]
+	cons = [x0, x_tar_c, vel_wind, wind_dir, 100]
 	
 	t0 = now() # record start time of function
 	xt = tackpoint_LS(pathtime, cons, xt0)
@@ -835,7 +837,7 @@ end
 # ╔═╡ ece8ec9b-d937-4c6e-96e6-8e13e85136b4
 begin
 	# Convergence path
-	scatter([xt_GD[1]], [xt_GD[2]], label = "Solution", xlabel = "x(m)", ylabel = "y(m)")
+	scatter([xt_GD[1]], [xt_GD[2]], label = "Solution", xlabel = "x(m)", ylabel = "y(m)", title = "Convergence path")
 	scatter!([xt0_GD[1]], [xt0_GD[2]], label = "Initial point")
 
 	x = []
@@ -852,9 +854,8 @@ end
 # ╔═╡ 43e64f1a-f804-4a9b-85c9-c906c5eacd9c
 begin
 	# Error
-	println(f)
 	plot([1:length(f)], f .- f[end], xlabel = "Iteration", ylabel = "Absolute error",
-	label = "")
+	label = "", title = "Convergence speed")
 end
 
 # ╔═╡ 30cbcfc4-0780-47d2-aec0-d990436e1693
@@ -939,7 +940,7 @@ PlutoUI = "~0.7.50"
 PLUTO_MANIFEST_TOML_CONTENTS = """
 # This file is machine-generated - editing it directly is not advised
 
-julia_version = "1.9.0"
+julia_version = "1.8.5"
 manifest_format = "2.0"
 project_hash = "8e2970c58d4d38916e7fcf4bbbfbc3ad4fc7fcea"
 
@@ -975,6 +976,18 @@ deps = ["Artifacts", "Bzip2_jll", "CompilerSupportLibraries_jll", "Fontconfig_jl
 git-tree-sha1 = "4b859a208b2397a7a623a03449e4636bdb17bcf2"
 uuid = "83423d85-b0ee-5818-9007-b63ccbeb887a"
 version = "1.16.1+1"
+
+[[deps.ChainRulesCore]]
+deps = ["Compat", "LinearAlgebra", "SparseArrays"]
+git-tree-sha1 = "e30f2f4e20f7f186dc36529910beaedc60cfa644"
+uuid = "d360d2e6-b24c-11e9-a2a3-2a2ae2dbcce4"
+version = "1.16.0"
+
+[[deps.ChangesOfVariables]]
+deps = ["LinearAlgebra", "Test"]
+git-tree-sha1 = "f84967c4497e0e1955f9a582c232b02847c5f589"
+uuid = "9e997f8a-9a97-42d5-a9f1-ce6bfc15e2c0"
+version = "0.1.7"
 
 [[deps.CodecZlib]]
 deps = ["TranscodingStreams", "Zlib_jll"]
@@ -1013,19 +1026,15 @@ uuid = "bbf7d656-a473-5ed7-a52c-81e309532950"
 version = "0.3.0"
 
 [[deps.Compat]]
-deps = ["UUIDs"]
+deps = ["Dates", "LinearAlgebra", "UUIDs"]
 git-tree-sha1 = "7a60c856b9fa189eb34f5f8a6f6b5529b7942957"
 uuid = "34da2185-b29b-5c13-b0c7-acf172513d20"
 version = "4.6.1"
-weakdeps = ["Dates", "LinearAlgebra"]
-
-    [deps.Compat.extensions]
-    CompatLinearAlgebraExt = "LinearAlgebra"
 
 [[deps.CompilerSupportLibraries_jll]]
 deps = ["Artifacts", "Libdl"]
 uuid = "e66e0078-7015-5450-92f7-15fbd957f2ae"
-version = "1.0.2+0"
+version = "1.0.1+0"
 
 [[deps.ConcurrentUtilities]]
 deps = ["Serialization", "Sockets"]
@@ -1055,9 +1064,7 @@ uuid = "ade2ca70-3891-5945-98fb-dc099432e06a"
 
 [[deps.DelimitedFiles]]
 deps = ["Mmap"]
-git-tree-sha1 = "9e2f36d3c96a820c678f2f1f1782582fcf685bae"
 uuid = "8bb1440f-4735-579b-a4ab-409b98df4dab"
-version = "1.9.1"
 
 [[deps.DiffResults]]
 deps = ["StaticArraysCore"]
@@ -1122,16 +1129,10 @@ uuid = "59287772-0a20-5a39-b81b-1366585eb4c0"
 version = "0.4.2"
 
 [[deps.ForwardDiff]]
-deps = ["CommonSubexpressions", "DiffResults", "DiffRules", "LinearAlgebra", "LogExpFunctions", "NaNMath", "Preferences", "Printf", "Random", "SpecialFunctions"]
+deps = ["CommonSubexpressions", "DiffResults", "DiffRules", "LinearAlgebra", "LogExpFunctions", "NaNMath", "Preferences", "Printf", "Random", "SpecialFunctions", "StaticArrays"]
 git-tree-sha1 = "00e252f4d706b3d55a8863432e742bf5717b498d"
 uuid = "f6369f11-7733-5829-9624-2563aa707210"
 version = "0.10.35"
-
-    [deps.ForwardDiff.extensions]
-    ForwardDiffStaticArraysExt = "StaticArrays"
-
-    [deps.ForwardDiff.weakdeps]
-    StaticArrays = "90137ffa-7385-5640-81b9-e52037218182"
 
 [[deps.FreeType2_jll]]
 deps = ["Artifacts", "Bzip2_jll", "JLLWrappers", "Libdl", "Pkg", "Zlib_jll"]
@@ -1220,6 +1221,12 @@ version = "0.2.3"
 deps = ["Markdown"]
 uuid = "b77e0a4c-d291-57a0-90e8-8db25a27a240"
 
+[[deps.InverseFunctions]]
+deps = ["Test"]
+git-tree-sha1 = "6667aadd1cdee2c6cd068128b3d226ebc4fb0c67"
+uuid = "3587e190-3f89-42d0-90ee-14403ec27112"
+version = "0.1.9"
+
 [[deps.IrrationalConstants]]
 git-tree-sha1 = "630b497eafcc20001bba38a4651b327dcfc491d2"
 uuid = "92d709cd-6900-40b7-9082-c6be49f344b6"
@@ -1277,14 +1284,6 @@ deps = ["Formatting", "InteractiveUtils", "LaTeXStrings", "MacroTools", "Markdow
 git-tree-sha1 = "099e356f267354f46ba65087981a77da23a279b7"
 uuid = "23fbe1c1-3f47-55db-b15f-69d7ec21a316"
 version = "0.16.0"
-
-    [deps.Latexify.extensions]
-    DataFramesExt = "DataFrames"
-    SymEngineExt = "SymEngine"
-
-    [deps.Latexify.weakdeps]
-    DataFrames = "a93c6f00-e57d-5684-b7b6-d8193f3e46c0"
-    SymEngine = "123dc426-2d89-5057-bbad-38513e3affd8"
 
 [[deps.LibCURL]]
 deps = ["LibCURL_jll", "MozillaCACerts_jll"]
@@ -1357,24 +1356,14 @@ uuid = "38a345b3-de98-5d2b-a5d3-14cd9215e700"
 version = "2.36.0+0"
 
 [[deps.LinearAlgebra]]
-deps = ["Libdl", "OpenBLAS_jll", "libblastrampoline_jll"]
+deps = ["Libdl", "libblastrampoline_jll"]
 uuid = "37e2e46d-f89d-539d-b4ee-838fcccc9c8e"
 
 [[deps.LogExpFunctions]]
-deps = ["DocStringExtensions", "IrrationalConstants", "LinearAlgebra"]
+deps = ["ChainRulesCore", "ChangesOfVariables", "DocStringExtensions", "InverseFunctions", "IrrationalConstants", "LinearAlgebra"]
 git-tree-sha1 = "0a1b7c2863e44523180fdb3146534e265a91870b"
 uuid = "2ab3a3ac-af41-5b50-aa03-7779005ae688"
 version = "0.3.23"
-
-    [deps.LogExpFunctions.extensions]
-    LogExpFunctionsChainRulesCoreExt = "ChainRulesCore"
-    LogExpFunctionsChangesOfVariablesExt = "ChangesOfVariables"
-    LogExpFunctionsInverseFunctionsExt = "InverseFunctions"
-
-    [deps.LogExpFunctions.weakdeps]
-    ChainRulesCore = "d360d2e6-b24c-11e9-a2a3-2a2ae2dbcce4"
-    ChangesOfVariables = "9e997f8a-9a97-42d5-a9f1-ce6bfc15e2c0"
-    InverseFunctions = "3587e190-3f89-42d0-90ee-14403ec27112"
 
 [[deps.Logging]]
 uuid = "56ddb016-857b-54e1-b83d-db4d58db5568"
@@ -1409,7 +1398,7 @@ version = "1.1.7"
 [[deps.MbedTLS_jll]]
 deps = ["Artifacts", "Libdl"]
 uuid = "c8ffd9c3-330d-5841-b78e-0817d7145fa1"
-version = "2.28.2+0"
+version = "2.28.0+0"
 
 [[deps.Measures]]
 git-tree-sha1 = "c13304c81eec1ed3af7fc20e75fb6b26092a1102"
@@ -1427,7 +1416,7 @@ uuid = "a63ad114-7e13-5084-954f-fe012c677804"
 
 [[deps.MozillaCACerts_jll]]
 uuid = "14a3606d-f60d-562e-9121-12d972cd8159"
-version = "2022.10.11"
+version = "2022.2.1"
 
 [[deps.NaNMath]]
 deps = ["OpenLibm_jll"]
@@ -1448,7 +1437,7 @@ version = "1.3.5+1"
 [[deps.OpenBLAS_jll]]
 deps = ["Artifacts", "CompilerSupportLibraries_jll", "Libdl"]
 uuid = "4536629a-c528-5b80-bd46-f80d51c5b363"
-version = "0.3.21+4"
+version = "0.3.20+0"
 
 [[deps.OpenLibm_jll]]
 deps = ["Artifacts", "Libdl"]
@@ -1487,7 +1476,7 @@ version = "1.6.0"
 [[deps.PCRE2_jll]]
 deps = ["Artifacts", "Libdl"]
 uuid = "efcefdf7-47ab-520b-bdef-62a2eaa19f15"
-version = "10.42.0+0"
+version = "10.40.0+0"
 
 [[deps.Parsers]]
 deps = ["Dates", "PrecompileTools", "UUIDs"]
@@ -1507,9 +1496,9 @@ uuid = "30392449-352a-5448-841d-b1acce4e97dc"
 version = "0.40.1+0"
 
 [[deps.Pkg]]
-deps = ["Artifacts", "Dates", "Downloads", "FileWatching", "LibGit2", "Libdl", "Logging", "Markdown", "Printf", "REPL", "Random", "SHA", "Serialization", "TOML", "Tar", "UUIDs", "p7zip_jll"]
+deps = ["Artifacts", "Dates", "Downloads", "LibGit2", "Libdl", "Logging", "Markdown", "Printf", "REPL", "Random", "SHA", "Serialization", "TOML", "Tar", "UUIDs", "p7zip_jll"]
 uuid = "44cfe95a-1eb2-52ea-b672-e2afdf69b78f"
-version = "1.9.0"
+version = "1.8.0"
 
 [[deps.PlotThemes]]
 deps = ["PlotUtils", "Statistics"]
@@ -1528,20 +1517,6 @@ deps = ["Base64", "Contour", "Dates", "Downloads", "FFMPEG", "FixedPointNumbers"
 git-tree-sha1 = "d03ef538114b38f89d66776f2d8fdc0280f90621"
 uuid = "91a5bcdd-55d7-5caf-9e0b-520d859cae80"
 version = "1.38.12"
-
-    [deps.Plots.extensions]
-    FileIOExt = "FileIO"
-    GeometryBasicsExt = "GeometryBasics"
-    IJuliaExt = "IJulia"
-    ImageInTerminalExt = "ImageInTerminal"
-    UnitfulExt = "Unitful"
-
-    [deps.Plots.weakdeps]
-    FileIO = "5789e2e9-d7fb-5bc7-8068-2c6fae9b9549"
-    GeometryBasics = "5c1252a2-5f33-56bf-86c9-59e7332b4326"
-    IJulia = "7073ff75-c697-5162-941a-fcdaad2a7d2a"
-    ImageInTerminal = "d8c32880-2388-543b-8c61-d9f865259254"
-    Unitful = "1986cc42-f94f-5a68-af5c-568840ba703d"
 
 [[deps.PlutoUI]]
 deps = ["AbstractPlutoDingetjes", "Base64", "ColorTypes", "Dates", "FixedPointNumbers", "Hyperscript", "HypertextLiteral", "IOCapture", "InteractiveUtils", "JSON", "Logging", "MIMEs", "Markdown", "Random", "Reexport", "URIs", "UUIDs"]
@@ -1642,20 +1617,20 @@ uuid = "a2af1166-a08f-5f64-846c-94a0d3cef48c"
 version = "1.1.0"
 
 [[deps.SparseArrays]]
-deps = ["Libdl", "LinearAlgebra", "Random", "Serialization", "SuiteSparse_jll"]
+deps = ["LinearAlgebra", "Random"]
 uuid = "2f01184e-e22b-5df5-ae63-d93ebab69eaf"
 
 [[deps.SpecialFunctions]]
-deps = ["IrrationalConstants", "LogExpFunctions", "OpenLibm_jll", "OpenSpecFun_jll"]
+deps = ["ChainRulesCore", "IrrationalConstants", "LogExpFunctions", "OpenLibm_jll", "OpenSpecFun_jll"]
 git-tree-sha1 = "ef28127915f4229c971eb43f3fc075dd3fe91880"
 uuid = "276daf66-3868-5448-9aa4-cd146d93841b"
 version = "2.2.0"
 
-    [deps.SpecialFunctions.extensions]
-    SpecialFunctionsChainRulesCoreExt = "ChainRulesCore"
-
-    [deps.SpecialFunctions.weakdeps]
-    ChainRulesCore = "d360d2e6-b24c-11e9-a2a3-2a2ae2dbcce4"
+[[deps.StaticArrays]]
+deps = ["LinearAlgebra", "Random", "StaticArraysCore", "Statistics"]
+git-tree-sha1 = "8982b3607a212b070a5e46eea83eb62b4744ae12"
+uuid = "90137ffa-7385-5640-81b9-e52037218182"
+version = "1.5.25"
 
 [[deps.StaticArraysCore]]
 git-tree-sha1 = "6b7ba252635a5eff6a0b0664a41ee140a1c9e72a"
@@ -1665,7 +1640,6 @@ version = "1.4.0"
 [[deps.Statistics]]
 deps = ["LinearAlgebra", "SparseArrays"]
 uuid = "10745b16-79ce-11e8-11f9-7d13ad32a3b2"
-version = "1.9.0"
 
 [[deps.StatsAPI]]
 deps = ["LinearAlgebra"]
@@ -1679,20 +1653,15 @@ git-tree-sha1 = "d1bf48bfcc554a3761a133fe3a9bb01488e06916"
 uuid = "2913bbd2-ae8a-5f71-8c99-4fb6c76f3a91"
 version = "0.33.21"
 
-[[deps.SuiteSparse_jll]]
-deps = ["Artifacts", "Libdl", "Pkg", "libblastrampoline_jll"]
-uuid = "bea87d4a-7f5b-5778-9afe-8cc45184846c"
-version = "5.10.1+6"
-
 [[deps.TOML]]
 deps = ["Dates"]
 uuid = "fa267f1f-6049-4f14-aa54-33bafae1ed76"
-version = "1.0.3"
+version = "1.0.0"
 
 [[deps.Tar]]
 deps = ["ArgTools", "SHA"]
 uuid = "a4e569a6-e804-4fa4-b0f3-eef7a1d5b13e"
-version = "1.10.0"
+version = "1.10.1"
 
 [[deps.TensorCore]]
 deps = ["LinearAlgebra"]
@@ -1891,7 +1860,7 @@ version = "1.4.0+3"
 [[deps.Zlib_jll]]
 deps = ["Libdl"]
 uuid = "83775a58-1f1d-513f-b197-d71354ab007a"
-version = "1.2.13+0"
+version = "1.2.12+3"
 
 [[deps.Zstd_jll]]
 deps = ["Artifacts", "JLLWrappers", "Libdl"]
@@ -1918,9 +1887,9 @@ uuid = "0ac62f75-1d6f-5e53-bd7c-93b484bb37c0"
 version = "0.15.1+0"
 
 [[deps.libblastrampoline_jll]]
-deps = ["Artifacts", "Libdl"]
+deps = ["Artifacts", "Libdl", "OpenBLAS_jll"]
 uuid = "8e850b90-86db-534c-a0d3-1478176c7d93"
-version = "5.7.0+0"
+version = "5.1.1+0"
 
 [[deps.libfdk_aac_jll]]
 deps = ["Artifacts", "JLLWrappers", "Libdl", "Pkg"]
@@ -1986,7 +1955,7 @@ version = "1.4.1+0"
 # ╟─3fc06973-839c-47d4-b0ca-2cdef798d5ca
 # ╟─7c4e4208-944b-4c7e-a2fd-6275d2347a19
 # ╟─fe1536be-8589-48ea-bbb8-9df739c4766c
-# ╠═868a916b-1aa3-4f6d-acf8-84f9b955b3e5
+# ╟─868a916b-1aa3-4f6d-acf8-84f9b955b3e5
 # ╟─5c858f72-fcda-45b5-b9a3-036e5cc2d9e9
 # ╠═1885527b-2fb8-46e1-99a5-a21e0efd0358
 # ╟─cb3e7da3-4146-477e-8f24-6a55a1e800c7
@@ -1994,11 +1963,10 @@ version = "1.4.1+0"
 # ╠═664f2131-553d-4a89-ac5f-cf8138c59b4d
 # ╠═ece8ec9b-d937-4c6e-96e6-8e13e85136b4
 # ╠═43e64f1a-f804-4a9b-85c9-c906c5eacd9c
+# ╠═eb41932c-e69a-48f5-ad72-6a3552a46117
 # ╟─c8bb9329-3c83-4cff-83bc-de79ab29c5a4
 # ╠═f64da374-d99e-4be1-87ca-23261c56a26b
 # ╠═30cbcfc4-0780-47d2-aec0-d990436e1693
-# ╟─7aa9d464-0c46-4d89-86c6-ab32d0e4bab9
-# ╠═eb41932c-e69a-48f5-ad72-6a3552a46117
 # ╟─80abb0a9-7bf9-46d2-902b-f0067fca76c8
 # ╟─c60d1274-1465-451f-b7c4-ce2587130a39
 # ╟─a1f98368-2ecb-40bc-80d2-b55d4224f2fc
