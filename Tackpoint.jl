@@ -1,5 +1,5 @@
 ### A Pluto.jl notebook ###
-# v0.19.22
+# v0.19.26
 
 using Markdown
 using InteractiveUtils
@@ -32,7 +32,7 @@ begin
 	
 	In the world of sailing, races are an esteemed test of skill. Both long and short distance races require careful planning in advance. In the most typical and basic form, the route planning problem requires reaching a windward mark in minimum time, or to simply pass within a certain distance of each marker, indicating the course's track.
 	
-	One of the central paradigms of sailing is that boats powered solely by wind power cannot sail directly into the wind, necessitating the boat's course to alternate between headings when needing to reach an upwind destination. This maneuver, commonly known as 'tacking', is frequently employed by sailors to make progress against the wind. In the strictest meaning of sailing jargon, tacking refers to turning into the wind, whereas "gybing" indicates a more tumultuous turn away from the wind.
+	One of the central paradigms of sailing is that boats powered solely by wind power cannot sail directly into the wind, necessitating the boat's course to alternate between headings when needing to reach an upwind destination. This maneuver, commonly known as 'tacking', is frequently employed by sailors to make progress against the wind. In the strictest meaning of sailing jargon, tacking refers to turning into the wind, whereas 'gybing' indicates a more tumultuous turn away from the wind.
 	
 	During a tack, the sailor typically aims to position the sailboat as close to the wind as possible while still ensuring the sails catch the wind in a way that generates aerodynamic lift, propelling the boat forward. Following this, the boat is gradually turned away from the wind to generate more lift on the sails, enabling it to move with greater speed but at a less direct path towards the destination. The range of headings that do not produce significant lift is referred to as the 'no-go zone'.
 	
@@ -87,11 +87,11 @@ In the expressions shown above the no-go zone ($\theta_0$), Degree Interval (i) 
 md""" ### Assumptions
 In order to simplify the optimization problem, the following assumptions are made and incorporated into the models:
 - In this project, only relatively short-range courses are evaluated, where we thus assume that a single tack will suffice to avoid most obstacles and to reach the (next) marker in reasonable time. This is mostly to limit the scale and computational burden, but the resulting insights can nevertheless be scaled up to an extent.
-- Effects of manoeuvres on the momentum of the sailboat are not considered. For example, tacking causes the sailboat to lose momentum due to the associated drag and loss of lift during the procedure. The loss of momentum is a transient process and is not modelled for this project. Hence, single tack routes are used to avoid misleading results.
-- True velocity of boat at any point of time is a function of the velocity of wind and heading relative to wind direction only. This implies that at any point these are the only two variables required to calculate how fast the boat will be moving with respect to ground (true velocity) in the direction it is moving.
-- Effects of momentum are not considered. As the expressions shown earlier allow for the calculation of velocity instantaneously, the time-dynamic effects are not modelled. This means that acceleration and deceleration are not taken into account. Thus, if the boat moves from a current position to the next position, the momentum is not carried or lost but the position’s assigned momentum is taken up.
+- Effects of maneuvers on the momentum of the sailboat are not considered. For example, tacking causes the sailboat to lose momentum due to the associated drag and loss of lift during the procedure. The loss of momentum is a transient process and is not modelled for this project. Hence, single tack routes are used to avoid misleading results.
+- The true velocity of a boat at any point in time is a function of the velocity of the wind and heading relative to wind direction only. This implies that at any point, these are the only two variables required to calculate how fast the boat will be moving with respect to ground (true velocity) in the direction it is moving.
+- Effects of momentum are not considered. As the expressions shown earlier allow for the calculation of velocity instantaneously, the time-dynamic effects are not modelled. This means that acceleration and deceleration are not taken into account. Thus, if the boat moves from a current position to the next position, the momentum is not carried or lost, but the position’s assigned momentum is taken up.
 - Effects of drag are not considered. The effects of drag considered are only those specified by the velocity increase constant and the no-go zone, both provided by the manufacturer. In reality, this phenomenon will have significant effects limiting the maximum velocity of the sailboat.
-- We assume that no external course modifiers are applied. The tide and the force that the wind exerts on the boat will (among others) influence the boat's true trajectory by "pushing" the boat relative to it's heading, resulting in so-called leeway. Over long distances, this must be accounted for by compensating the boat's heading accordingly. Given assumption 1, we may safely consider this effect negligible over such short distances.
+- We assume that no external course modifiers are applied. The tide and the force that the wind exerts on the boat will (among others) influence the boat's true trajectory by "pushing" the boat relative to its heading, resulting in so-called leeway. Over long distances, this must be accounted for by compensating the boat's heading accordingly. Given assumption 1, we may safely consider this effect negligible over such short distances.
 """
 
 # ╔═╡ 53145549-fa3a-4dee-ad79-9b9b2d0be4b3
@@ -127,7 +127,7 @@ This objective function is implemented as the function *pathtime*. To deal with 
 md"""#### Constraints
 The path optimization problem in question has only one constraint: the boat must never bear a heading into the no-go zone at any given moment. However, in real-life scenarios, during a tack, the boat temporarily faces the no-go zone before regaining lift in the sails. It is the boat's momentum that enables it to steer away from the no-go zone and resume forward motion. It is important to note that the models presented in the report do not incorporate the boat's momentum terms. Consequently, if the algorithm produces a path that involves a heading into the no-go zone, the boat loses its velocity and cannot proceed further. 
 
-To address this issue, the algorithms overcome this flaw by disincentiving or restricting the heading from entering the no-go zone. This is done in two ways. The first is by using lagrange multipliers to penalize the objective function more the closer it gets to the no-go-zone (default). The other is a brute force method, involving verifying every iteration whether the current headings are still feasible using the 'constraint_satisfied' function within the minimization algorithms (see further).
+To address this issue, the algorithms overcome this flaw by disincentivizing or restricting the heading from entering the no-go zone. This is done in two ways. The first is by using Lagrange multipliers to penalize the objective function more the closer it gets to the no-go-zone (default). The other is a brute force method, involving verifying every iteration whether the current headings are still feasible using the *constraint_satisfied* function within the minimization algorithms (see further).
 
 When travelling upwind,
 
@@ -142,30 +142,32 @@ md""" #### Minimization Algorithms
 
 A (brute force) line search method is first used (*tackpoint\_LS*), followed by gradient descent (*tackpoint\_GD*) and Newton's method (*tackpoint\_NM*) for performance comparison.
 
-For the line search, the starting point and the current destination is specified. The model employs a pattern search algorithm incorporating an accelerating/decelerating step size. The pattern search algorithm requires to start in the feasible region because starting in the no-go zone results in an infinite path time value.
+For the line search, the starting point and the current destination is specified. The model employs a pattern search algorithm incorporating an accelerating/decelerating step size. The pattern search algorithm requires starting in the feasible region because starting in the no-go zone results in an infinite path time value.
 
-Once, the pattern search algorithm is initialised, the path time is calculated in each of the probe directions (x+, y+, x-, y-) using the function handle pathtime. This function handle accepts the starting point of the sailboat, the tack point and the destination point and integrates along the two legs of the journey to find the time elapsed (or the path time). This is the objective function value that needs to be minimised. 
+Once, the pattern search algorithm is initialized, the path time is calculated in each of the probe directions (x+, y+, x-, y-) using the function handle pathtime. This function handle accepts the starting point of the sailboat, the tack point and the destination point and integrates along the two legs of the journey to find the time elapsed (or the path time). This is the objective function value that needs to be minimized. 
 
-With the objective function values from all four probes, the pattern search algorithm chooses the directions in x and y that favour the minimizing of the path time and determines the new tack point. Depending on the search directions (in X and Y) recorded, the pattern search algorithm updates the acceleration terms to reduce the number of pattern moves required to achieve convergence. Once convergence is reached, the optimal tack point (xt) and the optimal time elapsed values are returned.
+With the objective function values from all four probes, the pattern search algorithm chooses the directions in x and y that favor the minimizing of the path time and determines the new tack point. Depending on the search directions (in X and Y) recorded, the pattern search algorithm updates the acceleration terms to reduce the number of pattern moves required to achieve convergence. Once convergence is reached, the optimal tack point (xt) and the optimal time elapsed values are returned.
 
-Gradient Descent uses the *grad\_f* function to calculate the gradient of the objective function, while Newton's method requires and extra function *hess\_f* to compute the hessian. Both algorithms take an adaptive step in the direction of the negative gradient. Functionality is also available for the brute force constraint: if the new point is in the infeasible region, the search direction is reversed. Convergence criteria and maximum iterations are further enforced, with the latter being tunable by the user.
+Gradient descent uses the *grad\_f* function to calculate the gradient of the objective function, while Newton's method requires an extra function *hess\_f* to compute the hessian. Both algorithms take an adaptive step in the direction of the negative gradient. Functionality is also available for the brute force constraint: if the new point is in the infeasible region, the search direction is reversed. Convergence criteria and maximum iterations are further enforced, with the latter being tunable by the user.
 """
 
 # ╔═╡ 76cb13c2-c759-4b6f-a565-91188092a43a
 md""" #### Initial Point
-Two methods are provided to calculate an initial estimate of the solution. It is also possible to allow the user to specify an initial tackpoint, however it was opted to let an algorithm decide by default due to the unintuitive relationship between the no-go zone and the choice of tackpoint (effectively deciding the headings). The motivation behind this prudent approach is that the algorithm expects the solutions to stay within the feasible zone, from start to finish.
+Two methods are provided to calculate an initial estimate of the solution. It is also possible to allow the user to specify an initial tack point, however it was opted to let an algorithm decide by default due to the unintuitive relationship between the no-go zone and the choice of tack point (effectively deciding the headings). The motivation behind this prudent approach is that the algorithm expects the solutions to stay within the feasible zone, from start to finish.
 
-The first (*initial\_xt\_dev*) is based on the deviation of the starting point from the target vector (vector from starting point to destination). This worked fine for the line search due to the accelaration term, but led to time-out issues for gradient descent in testing, since the resulting initial solutions were often quite extreme and fixed given a certain combination of starting point and destination. Hence, for gradient descent, functions (*initial\_xt\_rand* & *calculate_y*) were written which generate a random feasible point on a line, constituting all points with the same orthogonal distance to both the destination and the starting point (within a reasonable domain for x and y).
+The first (*initial\_xt\_dev*) is based on the deviation of the starting point from the target vector (vector from starting point to destination). This worked fine for the line search due to the acceleration term, but led to time-out issues for gradient descent in testing, since the resulting initial solutions were often quite extreme and fixed given a certain combination of starting point and destination. Hence, for gradient descent, functions (*initial\_xt\_rand* & *calculate_y*) were written which generate a random feasible point on a line, constituting all points with the same orthogonal distance to both the destination and the starting point (within a reasonable domain for x and y).
+
+The only exception to this rationale is when the destination is downwind from the starting point, in which case the ship theoretically need not ever tack to stay outside the no-go-zone and thus keep decent speed. In practice, this is often the case. If a crew does not need to tack, they usually won't, as tacking is a maneuver requiring a certain amount of effort and may cause a loss in momentum (despite the potential marginal time save). Therefore, when the destination is located downwind, the initial point is set to the middle point between start and destination. Otherwise, the random or deviation based methods may make the algorithm land in a local minimum, resulting in a route far from a straight line. This is a prime example of sailing intuition aiding in attaining a realistic result.
 """
 
 # ╔═╡ 0c4f8d11-63e4-4a90-9d39-bfc6e8a11594
 md""" #### Step size
-As stated, the line search employs and accelaration term, which can be viewed as a primitive form of adaptive step size. For gradient descent and Newton's method, a backtracking line search function was implemented (*backtracking\_line\_search*).
+As stated, the line search employs an acceleration term, which can be viewed as a primitive form of adaptive step size. For gradient descent and Newton's method, a backtracking line search function was implemented (*backtracking\_line\_search*).
 """
 
 # ╔═╡ 76e424f1-5649-4836-b400-aa8809449fe2
 md""" #### Plotting
-The function *track* is first run to generate the path taken using the optimal tackpoint solution as input. This routine accepts a list of all the target markers specified in coordinates and creates a tracking variable that is able to update the active target marker based on whether or not the path has ‘touched’ it. This means that the tracker will let the algorithm know if the path has not passed any of the markers in order. Once the coordinates of the path have been generated, they can be plotted using *plot\_path*.
+The function *track* is first run to generate the path taken using the optimal tack point solution as input. This routine accepts a list of all the target markers specified in coordinates and creates a tracking variable that is able to update the active target marker based on whether the path has ‘touched’ it. This means that the tracker will let the algorithm know if the path has not passed any of the markers in order. Once the coordinates of the path have been generated, they can be plotted using *plot\_path*.
 """
 
 # ╔═╡ 3fc06973-839c-47d4-b0ca-2cdef798d5ca
@@ -190,6 +192,7 @@ md""" #### Parameter Options:
 **Algorithm**\
 `Maximum iterations (GD)` : $(@bind maxiter Slider(10:10:100, default=100, show_value=true))\
 `Constraint method (GD)` : $(@bind constraint_method Select(["lagrange", "brute force"], default="lagrange"))\
+`lambda (GD)` : $(@bind lambda Slider(0:1:10, default=1, show_value=true))\
 """
 
 # ╔═╡ 868a916b-1aa3-4f6d-acf8-84f9b955b3e5
@@ -235,11 +238,11 @@ md""" #### Discussion
 
 # ╔═╡ c60d1274-1465-451f-b7c4-ce2587130a39
 md"""
-Both the line search as well as the gradient descent algorithms converge smoothly, with gradient descent displaying the fastest convergence due to lessened computational burden that the gradient offers compared to the many individual operations carried out by the brute force method in every iteration. Note that the heading relative to the wind (usually) stays outside of the default value for the no-go zone (40°), indicating that these solutions are at the very least viable. As evidenced from the fast decreasing search direction norm towards the later iterations, the backtracking line search is performing its job well. The solution stays stable for varying initial points for the most part, with the occasional alternative local minimum detected. 
+Both the line search and the gradient descent algorithms converge smoothly, with gradient descent displaying the fastest convergence due to lessened computational burden that the gradient offers compared to the many individual operations carried out by the brute force method in every iteration. Note that the heading relative to the wind (usually) stays outside the default value for the no-go zone (40°), indicating that these solutions are at the very least viable. As evidenced from the fast decreasing search direction norm towards the later iterations, the backtracking line search is performing its job well. The solution stays stable for varying initial points for the most part, with the occasional alternative local minimum detected on lower lambda settings. The higher lambda, the more definitive the solution becomes, namely on the cusp of the no-go zone.
 
-When using the brute force constraint, a seemingly strange phenomenon is that the solution oscillates around the optimum when the initial point starts near it (leading to faster than average convergence). This is caused by the makeshift constraint boundary, forcing the search direction to invert when faced with the danger of entering the no-go zone. Hence, an interesting (but still somewhat intuitive) insight is that it may be a good idea in general to stay as close to the no-go zone as possible when wanting to reach an upwind marker to maximize VMG. This oscillating behavior will admittedly compromise the pinpoint accuracy of the solution. However, in sailing, a deviation of around one meter for a tackpoint can be considered negligible.
+When using the brute force constraint, a seemingly strange phenomenon is that the solution oscillates around the optimum when the initial point starts near it (leading to faster than average convergence). This is caused by the makeshift constraint boundary, forcing the search direction to invert when faced with the danger of entering the no-go zone. Hence, an interesting (but still somewhat intuitive) insight is that it may be a good idea in general to stay as close to the no-go zone as possible when wanting to reach an upwind marker to maximize VMG. This oscillating behavior will admittedly compromise the pinpoint accuracy of the solution. However, in sailing, a deviation of around one meter for a tack point can be considered negligible.
 
-Newton's method only seems to diverge away from the optimum (even when starting near the solution given by gradient descent) when using a constant step size, and goes nowhere with backracking line search. Thus, we consider this algorithm to be unsuitable for this problem in its current state. This may be due to the numerical instability commonly associated with this method, combined with the badly conditioned objective function, or due to issues related to computing the hessian accurately using Julia libraries.
+Newton's method only seems to diverge away from the optimum (even when starting near the solution given by gradient descent) when using a constant step size, and goes nowhere with backtracking line search. Thus, we consider this algorithm to be unsuitable for this problem in its current state. This may be due to the numerical instability commonly associated with this method, combined with the badly conditioned objective function, or due to issues related to computing the hessian accurately using Julia libraries.
 """
 
 # ╔═╡ a1f98368-2ecb-40bc-80d2-b55d4224f2fc
@@ -265,8 +268,9 @@ md""" #### Parameter Options:
 `Wind velocity (m/s)` : $(@bind vel_wind_rc Slider(1:10, default=5, show_value=true))\
 `Wind direction (origin)` : $(@bind wind_dir_temp_rc Select(["N", "NE", "E", "SE", "S", "SW", "W", "NW"], default="N"))\
 **Algorithm**\
-`Maximum iterations` : $(@bind maxiter_rc Slider(100:100:1000, default=100, show_value=true))\
+`Maximum iterations` : $(@bind maxiter_rc Slider(10:10:100, default=100, show_value=true))\
 `Constraint method` : $(@bind constraint_method_rc Select(["lagrange", "brute force"], default="lagrange"))\
+`lambda` : $(@bind lambda_rc Slider(0:1:10, default=1, show_value=true))\
 """
 
 # ╔═╡ 13bdfa35-562b-49a5-978a-26c4a4920359
@@ -309,8 +313,8 @@ function my_acos(x)
 end
 
 # ╔═╡ 55281d8b-38a7-465c-8419-e90ac5c316ab
-function pathtime(xt, cons, theta_nogo = deg2rad(40), lambda = 0.1)
-	x0, x_tar_c, vel_wind, wind_dir, maxiter, constraint_method = cons
+function pathtime(xt, cons, theta_nogo = deg2rad(40))
+	x0, x_tar_c, vel_wind, wind_dir, maxiter, constraint_method, lambda = cons
 
 	if constraint_method != "lagrange"
 		lambda = 0
@@ -362,8 +366,6 @@ function pathtime(xt, cons, theta_nogo = deg2rad(40), lambda = 0.1)
 		else
 		    vel_tack = 0.0  # or any other appropriate value
 		end
-
-		println(vel_tack)
         
         if vel_tack > 10e-2
             # time elapsed in increment
@@ -403,8 +405,6 @@ function pathtime(xt, cons, theta_nogo = deg2rad(40), lambda = 0.1)
 		else
 		    vel_tack = 0.0  # or any other appropriate value
 		end
-
-		println(vel_tack)
 		
         if vel_tack > 10e-2
             time_increment_2 = 0.1/vel_tack
@@ -618,7 +618,7 @@ function tackpoint_LS(f, cons, xt0)
 end
 
 # ╔═╡ 4622c7a9-a35c-44ef-9c4a-e6d09faa6e08
-function tackpoint_GD(f, cons, xt0, nu=1e-5)
+function tackpoint_GD(f, cons, xt0, nu=1e-3)
 	
 	x0, x_tar_c, vel_wind, wind_dir, maxiter, constraint_method = cons
 	
@@ -640,15 +640,11 @@ function tackpoint_GD(f, cons, xt0, nu=1e-5)
             break  # converged
 		end
 
-		if constraint_method == "brute force"
-			if constraint_satisfied(xt+Dx*t, cons)
-	            xt += t * Dx
-	        else
-	            xt -= t * Dx
-	        end
-		else
-			xt += t * Dx
-		end
+		if !constraint_satisfied(xt+Dx*t, cons) && constraint_method == "brute force"
+	        xt -= t * Dx
+	    else
+	        xt += t * Dx
+	    end
 
 		push!(xt_all, xt)
 		push!(f_all, pathtime(xt, cons))
@@ -662,6 +658,38 @@ function tackpoint_GD(f, cons, xt0, nu=1e-5)
 		println()
     end
     return xt_all, f_all
+end
+
+# ╔═╡ 765aa4f0-8cb6-4bfc-9441-9b64e97d3501
+let
+	x_sol = []
+	y_sol = []
+	
+	x_init = [xt0_GD[1]]
+	y_init = [xt0_GD[2]]
+
+	lambdas = []
+	append!(lambdas, 0:0.25:1)
+	append!(lambdas, 2:1:10)
+	
+	for l in lambdas
+		cons = [x0, x_tar_c, vel_wind, wind_dir, maxiter, constraint_method, l]
+		xt_GD_temp, f = tackpoint_GD(pathtime, cons, xt0_GD)
+
+		push!(x_sol, xt_GD_temp[end][1])
+		push!(y_sol, xt_GD_temp[end][2])
+	end
+	
+	scatter(x_sol, y_sol, label = "Solutions", title = "Multiplier sensitivity")
+	#scatter!(x_init, y_init, label = "Initial point")
+	#scatter!([x_tar_c[1]], [x_tar_c[2]], label = "Destination")
+	#scatter!([x0[1]], [x0[2]], label = "Starting point")
+
+	for i in 1:length(lambdas)
+		plot!([x_sol[i]], [y_sol[i]], label = "", series_annotations = text.(lambdas[i], :bottom))
+	end
+
+	plot!()
 end
 
 # ╔═╡ eb41932c-e69a-48f5-ad72-6a3552a46117
@@ -681,7 +709,7 @@ let
 			theta_rw_1_GD, theta_rw_2_GD, xt0_GD = initial_xt_rand(x0, x_tar_c, wind_dir)
 		end
 
-		cons = [x0, x_tar_c, vel_wind, wind_dir, maxiter, constraint_method]
+		cons = [x0, x_tar_c, vel_wind, wind_dir, maxiter, constraint_method, lambda]
 		xt_GD_temp, f = tackpoint_GD(pathtime, cons, xt0_GD)
 
 		push!(x_sol, xt_GD_temp[end][1])
@@ -704,7 +732,7 @@ let
 end
 
 # ╔═╡ f0a5869c-e3eb-425d-aab4-02b8018ee6a3
-function tackpoint_NM(f, cons, xt0 = nothing, epsilon=1e-5)
+function tackpoint_NM(f, cons, xt0 = nothing, epsilon=1e-3)
 	
 	x0, x_tar_c, vel_wind, wind_dir, maxiter, constraint_method = cons
 	
@@ -730,15 +758,11 @@ function tackpoint_NM(f, cons, xt0 = nothing, epsilon=1e-5)
 		
 		t = backtracking_line_search(f, xt, Dx, cons)
 		
-    	if constraint_method == "brute force"
-			if constraint_satisfied(xt+Dx*t, cons)
-	            xt += t * Dx
-	        else
-	            xt -= t * Dx
-	        end
-		else
-			xt += t * Dx
-		end
+    	if !constraint_satisfied(xt+Dx*t, cons) && constraint_method == "brute force"
+	        xt -= t * Dx
+	    else
+	        xt += t * Dx
+	    end
 
 		push!(xt_all, xt)
 		push!(f_all, pathtime(xt, cons))
@@ -840,7 +864,7 @@ end
 # ╔═╡ 1885527b-2fb8-46e1-99a5-a21e0efd0358
 let
 	xt0 = initial_xt_dev(x0, x_tar_c)
-	cons = [x0, x_tar_c, vel_wind, wind_dir, 100, constraint_method]
+	cons = [x0, x_tar_c, vel_wind, wind_dir, 100, constraint_method, lambda]
 	
 	t0 = now() # record start time of function
 	xt = tackpoint_LS(pathtime, cons, xt0)
@@ -857,7 +881,7 @@ end
 
 # ╔═╡ 664f2131-553d-4a89-ac5f-cf8138c59b4d
 begin
-	cons = [x0, x_tar_c, vel_wind, wind_dir, maxiter, constraint_method]
+	cons = [x0, x_tar_c, vel_wind, wind_dir, maxiter, constraint_method, lambda]
 	t0 = now() # record start time of function
 	xt_GD_temp, f = tackpoint_GD(pathtime, cons, xt0_GD)
 
@@ -899,7 +923,7 @@ end
 
 # ╔═╡ 30cbcfc4-0780-47d2-aec0-d990436e1693
 let
-	cons = [x0, x_tar_c, vel_wind, wind_dir, 5, constraint_method]
+	cons = [x0, x_tar_c, vel_wind, wind_dir, 5, constraint_method, lambda]
 	t0 = now() # record start time of function
 	xt_NM_temp, f = tackpoint_NM(pathtime, cons, xt0_NM)
 	xt_NM = xt_NM_temp[end]
@@ -935,7 +959,7 @@ let
 		println("Initial heading 1: "*string(rad2deg(theta_rw_1_rc)))
 		println("Initial heading 2: "*string(rad2deg(theta_rw_2_rc)))
 		println()
-		cons_rc = [x0_rc, x_tar_c, vel_wind_rc, wind_dir_rc, maxiter_rc, constraint_method_rc]
+		cons_rc = [x0_rc, x_tar_c, vel_wind_rc, wind_dir_rc, maxiter_rc, constraint_method_rc, lambda_rc]
 		
 		t0 = now() # record start time of function
 		xt_GD_temp, f = tackpoint_GD(pathtime, cons_rc, xt0_rc)
@@ -989,7 +1013,7 @@ PlutoUI = "~0.7.50"
 PLUTO_MANIFEST_TOML_CONTENTS = """
 # This file is machine-generated - editing it directly is not advised
 
-julia_version = "1.8.5"
+julia_version = "1.9.0"
 manifest_format = "2.0"
 project_hash = "8e2970c58d4d38916e7fcf4bbbfbc3ad4fc7fcea"
 
@@ -1025,18 +1049,6 @@ deps = ["Artifacts", "Bzip2_jll", "CompilerSupportLibraries_jll", "Fontconfig_jl
 git-tree-sha1 = "4b859a208b2397a7a623a03449e4636bdb17bcf2"
 uuid = "83423d85-b0ee-5818-9007-b63ccbeb887a"
 version = "1.16.1+1"
-
-[[deps.ChainRulesCore]]
-deps = ["Compat", "LinearAlgebra", "SparseArrays"]
-git-tree-sha1 = "e30f2f4e20f7f186dc36529910beaedc60cfa644"
-uuid = "d360d2e6-b24c-11e9-a2a3-2a2ae2dbcce4"
-version = "1.16.0"
-
-[[deps.ChangesOfVariables]]
-deps = ["LinearAlgebra", "Test"]
-git-tree-sha1 = "f84967c4497e0e1955f9a582c232b02847c5f589"
-uuid = "9e997f8a-9a97-42d5-a9f1-ce6bfc15e2c0"
-version = "0.1.7"
 
 [[deps.CodecZlib]]
 deps = ["TranscodingStreams", "Zlib_jll"]
@@ -1075,15 +1087,19 @@ uuid = "bbf7d656-a473-5ed7-a52c-81e309532950"
 version = "0.3.0"
 
 [[deps.Compat]]
-deps = ["Dates", "LinearAlgebra", "UUIDs"]
+deps = ["UUIDs"]
 git-tree-sha1 = "7a60c856b9fa189eb34f5f8a6f6b5529b7942957"
 uuid = "34da2185-b29b-5c13-b0c7-acf172513d20"
 version = "4.6.1"
+weakdeps = ["Dates", "LinearAlgebra"]
+
+    [deps.Compat.extensions]
+    CompatLinearAlgebraExt = "LinearAlgebra"
 
 [[deps.CompilerSupportLibraries_jll]]
 deps = ["Artifacts", "Libdl"]
 uuid = "e66e0078-7015-5450-92f7-15fbd957f2ae"
-version = "1.0.1+0"
+version = "1.0.2+0"
 
 [[deps.ConcurrentUtilities]]
 deps = ["Serialization", "Sockets"]
@@ -1113,7 +1129,9 @@ uuid = "ade2ca70-3891-5945-98fb-dc099432e06a"
 
 [[deps.DelimitedFiles]]
 deps = ["Mmap"]
+git-tree-sha1 = "9e2f36d3c96a820c678f2f1f1782582fcf685bae"
 uuid = "8bb1440f-4735-579b-a4ab-409b98df4dab"
+version = "1.9.1"
 
 [[deps.DiffResults]]
 deps = ["StaticArraysCore"]
@@ -1178,10 +1196,16 @@ uuid = "59287772-0a20-5a39-b81b-1366585eb4c0"
 version = "0.4.2"
 
 [[deps.ForwardDiff]]
-deps = ["CommonSubexpressions", "DiffResults", "DiffRules", "LinearAlgebra", "LogExpFunctions", "NaNMath", "Preferences", "Printf", "Random", "SpecialFunctions", "StaticArrays"]
+deps = ["CommonSubexpressions", "DiffResults", "DiffRules", "LinearAlgebra", "LogExpFunctions", "NaNMath", "Preferences", "Printf", "Random", "SpecialFunctions"]
 git-tree-sha1 = "00e252f4d706b3d55a8863432e742bf5717b498d"
 uuid = "f6369f11-7733-5829-9624-2563aa707210"
 version = "0.10.35"
+
+    [deps.ForwardDiff.extensions]
+    ForwardDiffStaticArraysExt = "StaticArrays"
+
+    [deps.ForwardDiff.weakdeps]
+    StaticArrays = "90137ffa-7385-5640-81b9-e52037218182"
 
 [[deps.FreeType2_jll]]
 deps = ["Artifacts", "Bzip2_jll", "JLLWrappers", "Libdl", "Pkg", "Zlib_jll"]
@@ -1270,12 +1294,6 @@ version = "0.2.3"
 deps = ["Markdown"]
 uuid = "b77e0a4c-d291-57a0-90e8-8db25a27a240"
 
-[[deps.InverseFunctions]]
-deps = ["Test"]
-git-tree-sha1 = "6667aadd1cdee2c6cd068128b3d226ebc4fb0c67"
-uuid = "3587e190-3f89-42d0-90ee-14403ec27112"
-version = "0.1.9"
-
 [[deps.IrrationalConstants]]
 git-tree-sha1 = "630b497eafcc20001bba38a4651b327dcfc491d2"
 uuid = "92d709cd-6900-40b7-9082-c6be49f344b6"
@@ -1333,6 +1351,14 @@ deps = ["Formatting", "InteractiveUtils", "LaTeXStrings", "MacroTools", "Markdow
 git-tree-sha1 = "099e356f267354f46ba65087981a77da23a279b7"
 uuid = "23fbe1c1-3f47-55db-b15f-69d7ec21a316"
 version = "0.16.0"
+
+    [deps.Latexify.extensions]
+    DataFramesExt = "DataFrames"
+    SymEngineExt = "SymEngine"
+
+    [deps.Latexify.weakdeps]
+    DataFrames = "a93c6f00-e57d-5684-b7b6-d8193f3e46c0"
+    SymEngine = "123dc426-2d89-5057-bbad-38513e3affd8"
 
 [[deps.LibCURL]]
 deps = ["LibCURL_jll", "MozillaCACerts_jll"]
@@ -1405,14 +1431,24 @@ uuid = "38a345b3-de98-5d2b-a5d3-14cd9215e700"
 version = "2.36.0+0"
 
 [[deps.LinearAlgebra]]
-deps = ["Libdl", "libblastrampoline_jll"]
+deps = ["Libdl", "OpenBLAS_jll", "libblastrampoline_jll"]
 uuid = "37e2e46d-f89d-539d-b4ee-838fcccc9c8e"
 
 [[deps.LogExpFunctions]]
-deps = ["ChainRulesCore", "ChangesOfVariables", "DocStringExtensions", "InverseFunctions", "IrrationalConstants", "LinearAlgebra"]
+deps = ["DocStringExtensions", "IrrationalConstants", "LinearAlgebra"]
 git-tree-sha1 = "0a1b7c2863e44523180fdb3146534e265a91870b"
 uuid = "2ab3a3ac-af41-5b50-aa03-7779005ae688"
 version = "0.3.23"
+
+    [deps.LogExpFunctions.extensions]
+    LogExpFunctionsChainRulesCoreExt = "ChainRulesCore"
+    LogExpFunctionsChangesOfVariablesExt = "ChangesOfVariables"
+    LogExpFunctionsInverseFunctionsExt = "InverseFunctions"
+
+    [deps.LogExpFunctions.weakdeps]
+    ChainRulesCore = "d360d2e6-b24c-11e9-a2a3-2a2ae2dbcce4"
+    ChangesOfVariables = "9e997f8a-9a97-42d5-a9f1-ce6bfc15e2c0"
+    InverseFunctions = "3587e190-3f89-42d0-90ee-14403ec27112"
 
 [[deps.Logging]]
 uuid = "56ddb016-857b-54e1-b83d-db4d58db5568"
@@ -1447,7 +1483,7 @@ version = "1.1.7"
 [[deps.MbedTLS_jll]]
 deps = ["Artifacts", "Libdl"]
 uuid = "c8ffd9c3-330d-5841-b78e-0817d7145fa1"
-version = "2.28.0+0"
+version = "2.28.2+0"
 
 [[deps.Measures]]
 git-tree-sha1 = "c13304c81eec1ed3af7fc20e75fb6b26092a1102"
@@ -1465,7 +1501,7 @@ uuid = "a63ad114-7e13-5084-954f-fe012c677804"
 
 [[deps.MozillaCACerts_jll]]
 uuid = "14a3606d-f60d-562e-9121-12d972cd8159"
-version = "2022.2.1"
+version = "2022.10.11"
 
 [[deps.NaNMath]]
 deps = ["OpenLibm_jll"]
@@ -1486,7 +1522,7 @@ version = "1.3.5+1"
 [[deps.OpenBLAS_jll]]
 deps = ["Artifacts", "CompilerSupportLibraries_jll", "Libdl"]
 uuid = "4536629a-c528-5b80-bd46-f80d51c5b363"
-version = "0.3.20+0"
+version = "0.3.21+4"
 
 [[deps.OpenLibm_jll]]
 deps = ["Artifacts", "Libdl"]
@@ -1525,7 +1561,7 @@ version = "1.6.0"
 [[deps.PCRE2_jll]]
 deps = ["Artifacts", "Libdl"]
 uuid = "efcefdf7-47ab-520b-bdef-62a2eaa19f15"
-version = "10.40.0+0"
+version = "10.42.0+0"
 
 [[deps.Parsers]]
 deps = ["Dates", "PrecompileTools", "UUIDs"]
@@ -1545,9 +1581,9 @@ uuid = "30392449-352a-5448-841d-b1acce4e97dc"
 version = "0.40.1+0"
 
 [[deps.Pkg]]
-deps = ["Artifacts", "Dates", "Downloads", "LibGit2", "Libdl", "Logging", "Markdown", "Printf", "REPL", "Random", "SHA", "Serialization", "TOML", "Tar", "UUIDs", "p7zip_jll"]
+deps = ["Artifacts", "Dates", "Downloads", "FileWatching", "LibGit2", "Libdl", "Logging", "Markdown", "Printf", "REPL", "Random", "SHA", "Serialization", "TOML", "Tar", "UUIDs", "p7zip_jll"]
 uuid = "44cfe95a-1eb2-52ea-b672-e2afdf69b78f"
-version = "1.8.0"
+version = "1.9.0"
 
 [[deps.PlotThemes]]
 deps = ["PlotUtils", "Statistics"]
@@ -1566,6 +1602,20 @@ deps = ["Base64", "Contour", "Dates", "Downloads", "FFMPEG", "FixedPointNumbers"
 git-tree-sha1 = "d03ef538114b38f89d66776f2d8fdc0280f90621"
 uuid = "91a5bcdd-55d7-5caf-9e0b-520d859cae80"
 version = "1.38.12"
+
+    [deps.Plots.extensions]
+    FileIOExt = "FileIO"
+    GeometryBasicsExt = "GeometryBasics"
+    IJuliaExt = "IJulia"
+    ImageInTerminalExt = "ImageInTerminal"
+    UnitfulExt = "Unitful"
+
+    [deps.Plots.weakdeps]
+    FileIO = "5789e2e9-d7fb-5bc7-8068-2c6fae9b9549"
+    GeometryBasics = "5c1252a2-5f33-56bf-86c9-59e7332b4326"
+    IJulia = "7073ff75-c697-5162-941a-fcdaad2a7d2a"
+    ImageInTerminal = "d8c32880-2388-543b-8c61-d9f865259254"
+    Unitful = "1986cc42-f94f-5a68-af5c-568840ba703d"
 
 [[deps.PlutoUI]]
 deps = ["AbstractPlutoDingetjes", "Base64", "ColorTypes", "Dates", "FixedPointNumbers", "Hyperscript", "HypertextLiteral", "IOCapture", "InteractiveUtils", "JSON", "Logging", "MIMEs", "Markdown", "Random", "Reexport", "URIs", "UUIDs"]
@@ -1666,20 +1716,20 @@ uuid = "a2af1166-a08f-5f64-846c-94a0d3cef48c"
 version = "1.1.0"
 
 [[deps.SparseArrays]]
-deps = ["LinearAlgebra", "Random"]
+deps = ["Libdl", "LinearAlgebra", "Random", "Serialization", "SuiteSparse_jll"]
 uuid = "2f01184e-e22b-5df5-ae63-d93ebab69eaf"
 
 [[deps.SpecialFunctions]]
-deps = ["ChainRulesCore", "IrrationalConstants", "LogExpFunctions", "OpenLibm_jll", "OpenSpecFun_jll"]
+deps = ["IrrationalConstants", "LogExpFunctions", "OpenLibm_jll", "OpenSpecFun_jll"]
 git-tree-sha1 = "ef28127915f4229c971eb43f3fc075dd3fe91880"
 uuid = "276daf66-3868-5448-9aa4-cd146d93841b"
 version = "2.2.0"
 
-[[deps.StaticArrays]]
-deps = ["LinearAlgebra", "Random", "StaticArraysCore", "Statistics"]
-git-tree-sha1 = "8982b3607a212b070a5e46eea83eb62b4744ae12"
-uuid = "90137ffa-7385-5640-81b9-e52037218182"
-version = "1.5.25"
+    [deps.SpecialFunctions.extensions]
+    SpecialFunctionsChainRulesCoreExt = "ChainRulesCore"
+
+    [deps.SpecialFunctions.weakdeps]
+    ChainRulesCore = "d360d2e6-b24c-11e9-a2a3-2a2ae2dbcce4"
 
 [[deps.StaticArraysCore]]
 git-tree-sha1 = "6b7ba252635a5eff6a0b0664a41ee140a1c9e72a"
@@ -1689,6 +1739,7 @@ version = "1.4.0"
 [[deps.Statistics]]
 deps = ["LinearAlgebra", "SparseArrays"]
 uuid = "10745b16-79ce-11e8-11f9-7d13ad32a3b2"
+version = "1.9.0"
 
 [[deps.StatsAPI]]
 deps = ["LinearAlgebra"]
@@ -1702,15 +1753,20 @@ git-tree-sha1 = "d1bf48bfcc554a3761a133fe3a9bb01488e06916"
 uuid = "2913bbd2-ae8a-5f71-8c99-4fb6c76f3a91"
 version = "0.33.21"
 
+[[deps.SuiteSparse_jll]]
+deps = ["Artifacts", "Libdl", "Pkg", "libblastrampoline_jll"]
+uuid = "bea87d4a-7f5b-5778-9afe-8cc45184846c"
+version = "5.10.1+6"
+
 [[deps.TOML]]
 deps = ["Dates"]
 uuid = "fa267f1f-6049-4f14-aa54-33bafae1ed76"
-version = "1.0.0"
+version = "1.0.3"
 
 [[deps.Tar]]
 deps = ["ArgTools", "SHA"]
 uuid = "a4e569a6-e804-4fa4-b0f3-eef7a1d5b13e"
-version = "1.10.1"
+version = "1.10.0"
 
 [[deps.TensorCore]]
 deps = ["LinearAlgebra"]
@@ -1909,7 +1965,7 @@ version = "1.4.0+3"
 [[deps.Zlib_jll]]
 deps = ["Libdl"]
 uuid = "83775a58-1f1d-513f-b197-d71354ab007a"
-version = "1.2.12+3"
+version = "1.2.13+0"
 
 [[deps.Zstd_jll]]
 deps = ["Artifacts", "JLLWrappers", "Libdl"]
@@ -1936,9 +1992,9 @@ uuid = "0ac62f75-1d6f-5e53-bd7c-93b484bb37c0"
 version = "0.15.1+0"
 
 [[deps.libblastrampoline_jll]]
-deps = ["Artifacts", "Libdl", "OpenBLAS_jll"]
+deps = ["Artifacts", "Libdl"]
 uuid = "8e850b90-86db-534c-a0d3-1478176c7d93"
-version = "5.1.1+0"
+version = "5.7.0+0"
 
 [[deps.libfdk_aac_jll]]
 deps = ["Artifacts", "JLLWrappers", "Libdl", "Pkg"]
@@ -2012,6 +2068,7 @@ version = "1.4.1+0"
 # ╠═664f2131-553d-4a89-ac5f-cf8138c59b4d
 # ╠═ece8ec9b-d937-4c6e-96e6-8e13e85136b4
 # ╠═43e64f1a-f804-4a9b-85c9-c906c5eacd9c
+# ╠═765aa4f0-8cb6-4bfc-9441-9b64e97d3501
 # ╠═eb41932c-e69a-48f5-ad72-6a3552a46117
 # ╟─c8bb9329-3c83-4cff-83bc-de79ab29c5a4
 # ╠═f64da374-d99e-4be1-87ca-23261c56a26b
